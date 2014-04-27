@@ -7,7 +7,7 @@ import pprint
 # CONNECTION & API KEY's
 #=======================================================================================
 
-sunlight.config.API_KEY = "f89f5a1b63654d02ab53b5295feac047"
+sunlight.config.API_KEY = "somelettersandnumbers"
 sunlight.config.API_SIGNUP_PAGE = 'http://sunlightfoundation.com/api/accounts/register/'
 sunlight.config.KEY_ENVVAR = 'SUNLIGHT_API_KEY'
 sunlight.config.KEY_LOCATION = '~/.sunlight.key'
@@ -16,7 +16,7 @@ sunlight.config.KEY_LOCATION = '~/.sunlight.key'
 # Url with user and password to MongoHQ database
 #=======================================================================================
 
-MONGOHQ_URL = 'mongodb://pchow:2014gadsla@oceanic.mongohq.com:10036/openstates'
+MONGOHQ_URL = 'mongodb://USER:PASSWORD@oceanic.mongohq.com:10036/openstates'
 
 '''
 @param param: None
