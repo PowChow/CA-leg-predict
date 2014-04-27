@@ -16,7 +16,7 @@ sunlight.config.KEY_LOCATION = '~/.sunlight.key'
 # Url with user and password to MongoHQ database
 #=======================================================================================
 
-MONGOHQ_URL = 'mongodb://pchow:gadsla2014@oceanic.mongohq.com:10036/openstates'
+MONGOHQ_URL = 'mongodb://pchow:2014gadsla@oceanic.mongohq.com:10036/openstates'
 
 '''
 @param param: None
@@ -35,94 +35,14 @@ print "Yes, you have a connection"
 #=======================================================================================
 # FUNCTIONS 
 #=======================================================================================
-
-'''
-@param e: value of key in json object
-@note: reads each element e and makes a list from it 
-'''
-def ConvertToList(e):
-    lst = []
-    for x in e:
-        lst.append(x)
-    return lst
-
-'''
-@param bill: Json object containing bill data
-@param bill_table: table object to store info back in database
-@note: some keys for Json data are not in unicode format...need to figure out 
-       whether to discard element or assign null value
-'''        
-def PostBillInfoToDatabase(bills, bill_table):
-    for b in bills:
-        try:
-            bill_table.insert({
-                               'title':b['title'],
-                               'state':b['state'],
-                               'session':b['session'],
-                               'bill_id':b['bill_id'],
-                               'type':b['type'],
-                               'chamber':b['chamber'],
-                               'subjects':b['subjects'],
-                               'type':b['type'],
-                               'id':b['id'],
-                               })
-        except:
-            print "UnicodeEncodeError: 'ascii' codec can't encode characters......will not be sending this element to database"
-            
-
-'''
-@param bill: Json object containing bill details data
-@param bill_table: table object to store info back in database
-'''        
-def PostBillDetailsInfoToDatabase(bills_d, bill_d_table):
-    for b in bills_d:
-        try:
-            bill_d_table.insert(bills_d)
-        except:
-            print "UnicodeEncodeError: 'ascii' codec can't encode characters......will not be sending this element to database"
-            
-'''
-@param legislator: Json object containing bill data
-@param legislator_table: table object to store info back in database
-@note: some keys for Json data are not in unicode format...need to figure out 
-       whether to discard element or assign null value
-'''            
-def PostLegislatorInfoToDatabase(legislator, legislator_table):
-    for l in legislator:
-        try:
-            legislator_table.insert({
-                                     'active':l['active'],
-                                     'all_ids':ConvertToList(l['all_ids']),
-                                     'chamber':l['chamber'],
-                                     'district':l['district'],
-                                     'full_name':l['full_name'],
-                                     'leg_id':l['leg_id'],
-                                     'party':l['party'],
-                                      'state':l['state']
-                                     })
-        except:
-            print "UnicodeEncodeError: 'ascii' codec can't encode characters......will not be sending this element to database"
-            
-'''
-@param committee: Json object containing bill data
-@param committee_table: table object to store info back in database
-@note: some keys for Json data are not in unicode format...need to figure out 
-       whether to discard element or assign null value
-'''            
-def PostCommitteeInfoToDatabase(committee, committee_table):
-    for c in committee:
-        try:
-            committee_table.insert({
-                                    'all_ids':ConvertToList(c['all_ids']),
-                                    'chamber':c['chamber'],
-                                    'committee':c['committee'],
-                                    'id':c['id'],
-                                    'parent_id':c['parent_id'],
-                                    'state':c['state'],
-                                    'subcommittee':c['subcommittee']
-                                    })
-        except:
-            print "UnicodeEncodeError: 'ascii' codec can't encode characters......will not be sending this element to database"
+     
+def PostDB(data, table):
+    '''
+    @param bill: Json object containing data into table
+    @param bill_table: table object to store info back in database
+    @note: originally function tried to deal with keys for Json data not in unicode format...encode these values and skip errors
+    '''   
+    table.insert(d)          
 
 #=======================================================================================
 # CALL SUNLIGHT API & PUSH TO DATABASE
@@ -145,7 +65,7 @@ def main():
     #============================================================================
     db  = EstablishConnection()
     
-    bill_table = db.bills                  #bill table
+    bill_table = db.ca_bills               #bill table
     bill_d_table = db.bills_details        #bill details table
     legislator_table = db.legislators      #legislator table
     committee_table = db.committees        #committee table
@@ -159,9 +79,11 @@ def main():
     #                            active (true or false, true default), term,
     #                            district, party 
     
+    #When data from all states is necessary, loop over list of states
     #for state in STATES:
     #    bills_data = sunlight.openstates.bills(state = state, chamber = 'lower')
 
+    #bills_data = sunlight.openstates.bills(state = state, chamber = 'lower')
     #bills_data = sunlight.openstates.bills(state = state, chamber = 'upper')
     #committee_data = sunlight.openstates.committees()
     #legislators_data = sunlight.openstates.legislators()
@@ -171,35 +93,32 @@ def main():
     #Send data to database
     #============================================================================
     
-    #PostBillInfoToDatabase(bills_data,bill_table)
-    #PostLegislatorInfoToDatabase(legislators_data, legislator_table)
-    #PostCommitteeInfoToDatabase(committee_data, committee_table)
+    #PostDB(bills_data,bill_table)
+    #PostDB(legislators_data, legislator_table)
+    #PostDB(committee_data, committee_table)
 
 
-    # From MongoDB: Create list of unique bill_id & session for API call for bill details 
-    unique_bill_session = bill_table.aggregate(
+    # From MongoDB: Created list of dicts, where dict keys are bill_id & list of sessions  
+    # Getting list of tuples for API call to bill details
+    bill_session = bill_table.aggregate(
         { '$group': {
-                '_id': {'bill_id': '$bill_id', 'session': '$session'}
-        }})
+             '_id': '$bill_id', 
+             'session': {'$push':'$session'}}
+        }).values()[1]
+ 
+  # list_bill_session = [ list_bill_session.append(str(bill_session[b].values()[1]), list(bill_session[b].values()[0])) for b in bill_session ]
+    list_bill_session =[]
 
-    a = {}
-    for k, val in unique_bill_session.iteritems():
-        a = unique_bill_session[k]
-
-    list_bill_session = []
-
-    for i,entry in enumerate(a):
-        x = ((a[i]['_id']['bill_id'],a[i]['_id']['session']))
-        list_bill_session.append(x)
+    for i, entry in enumerate(bill_session):
+        b_id = str(bill_session[i].values()[1]) 
+        for s in xrange(1, len(bill_session[i].values()[0])):
+            b_session = str(bill_session[i].values()[0][s])
+            list_bill_session.append((b_id, b_session))
         
     #API calls for bill details using unique list of bill_id & session
     #example: sunlight.openstates.bill_detail(state="CA",session='20092010', bill_id='SCR 2')
-
-    for i,entry in enumerate(list_bill_session):
-        s = str(list_bill_session[i][1])
-        b = str(list_bill_session[i][0])
-        bill_details = sunlight.openstates.bill_detail(state='CA',session=s, bill_id=b)
-        bill_d_table.insert(bill_details)
+    list_bill_details = [ sunlight.openstates.bill_detail(state='CA',session=session, bill_id=bill) for bill, session in list_bill_session  ]
+    bill_d_table.insert(bill_details)
 
 
 if __name__ == '__main__':
