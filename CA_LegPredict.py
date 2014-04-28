@@ -2,6 +2,7 @@ from pymongo import MongoClient
 import sunlight
 import json
 import pprint
+import pandas as pd
 
 #=======================================================================================
 # CONNECTION & API KEY's
@@ -30,6 +31,7 @@ def EstablishConnection():
     return db
 
 #Check connection to MongoDB
+#change to logging
 print "Yes, you have a connection"
 
 #=======================================================================================
@@ -117,15 +119,62 @@ def main():
         
     #API calls for bill details using unique list of bill_id & session
     #example: sunlight.openstates.bill_detail(state="CA",session='20092010', bill_id='SCR 2')
+    # Question the API call here may timeout, suggestions for production / doing the call in chunks?
     list_bill_details = [ sunlight.openstates.bill_detail(state='CA',session=session, bill_id=bill) for bill, session in list_bill_session  ]
     bill_d_table.insert(bill_details)
-
 
 if __name__ == '__main__':
     main()
 
+#change to logging
 print("\n=======================Sucess!=====================================")
 
+
+#============================================================================
+#Query MongoDB to create set of dataframes - OK this might no work so well, trying something else
+#============================================================================
+
+#Create unique set of values for fields and convert to PD DataFrame
+unique_s = pd.DataFrame(db.ca_bills.distinct('session'), columns = ['session'])
+unique_b = pd.DataFrame(db.ca_bills.distinct('bill_id'), columns=['bill_id'])
+subjects = pd.DataFrame(db.ca_bills.aggregate([
+            {'$project': {'subjects':1}},
+            {'$unwind': '$subjects'},
+            {'$group': {'_id': '$subjects', 'count':{'$sum':1}}}
+        ]).values()[1])
+
+df_bills = pd.DataFrame(list(db.ca_bills.find()))
+df_bills_d = pd.DataFrame(list(db.bills_details.find()))
+
+
+# bills detail data query; Here query is unnecessary for converting to panda
+'''
+bd_q = db.bills_details.find({},
+            {'_id': 0, 
+             'session': 1, 'bill_id':1, 'title':1, 'sponsors':1, 'subjects':1, 'chamber':1, 'level':1,
+             'scraped_subjects':1, 'subject':1, 'summary':1, 'title':1, 'versions.url':1, 
+             'action_dates.first':1, 'action_dates.last':1,'actions.passed_upper':1,'actions.passed_lower':1,'actions.signed':1,
+             'sponsors':1,    
+             })
+'''
+
+#both committees and legislators MongoDB tables have problems converting to panda. Are these unicode problems?
+#df_comm = pd.DataFrame(list(db.committees.find()))
+#df_legis = pd.DataFrame(list(db.legislators.find()))
+
+# The closest I can get is getting a list of dataframes
+df_comm = []
+for row in list(db.committees.find()): 
+    df_comm.append(pd.DataFrame(row)) 
+#results = pd.concat(frames) #this gets a messed up result too
+ 
+df_legsl = []
+for row in list(db.legislators.find()):
+    df_legsl.append(pd.DataFrame(row))
+
+#============================================================================
+#Next Step
+#============================================================================
 
 
 
