@@ -75,17 +75,19 @@ def main():
     		l['url'] = link
     		l['text'] = GetLegText(link)
 
-    # using one legtext as an example
+    # -----------------using one legtext as an example---------------------------------------
     db.legtext.insert(lod_leg[:2]) #limited to [:2] for testing
     a = GetLegText('http://leginfo.legislature.ca.gov/faces/billNavClient.xhtml?bill_id=200920100AB123') #lengthy text
     raw = nltk.clean_html(a)
-    words = [w.lower() for w in nltk.wordpunct_tokenize(raw)]
+    words = [w.lower() for w in nltk.wordpunct_tokenize(raw) if (w.isalpha() & (len(w) > 1)) ]
+    filtered_words = [w for w in words if w not in nltk.corpus.stopwords.words('english')]
     #take out words in a stoplist
     vocab = sorted(set(words)) # normalized words, build the vocabulary
     
     wnl = nltk.WordNetLemmatizer() # removing word stems that are only a dictionary
     [wnl.lemmatize(t) for t in words]
 
+    #run through gensim to determine categories for each legislative text - lesson 15
 
     logging.info('Finished')
 
