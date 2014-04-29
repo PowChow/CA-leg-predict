@@ -4,6 +4,13 @@ import json
 import pprint
 import pandas as pd
 
+import logging
+from optparse import OptionParser
+import sys
+from time import time
+
+# Display progress logs on stdout
+logging.basicConfig(level=logging.INFO, format '%(asctime)s %(levelname)s %(message)s')
 #=======================================================================================
 # CONNECTION & API KEY's
 #=======================================================================================
@@ -32,7 +39,7 @@ def EstablishConnection():
 
 #Check connection to MongoDB
 #change to logging
-print "Yes, you have a connection"
+logging.info('Yes, you have a connection to MongoDB')
 
 #=======================================================================================
 # FUNCTIONS 
@@ -62,6 +69,9 @@ STATES = ["CA"]
 
 
 def main():
+    
+    logging.basicsConfig(filename='CA_LegPredict.log', level=logging.DEBUG)
+    logging.info('Started')
     #============================================================================
     #Establish connection and make database object
     #============================================================================
@@ -123,12 +133,10 @@ def main():
     list_bill_details = [ sunlight.openstates.bill_detail(state='CA',session=session, bill_id=bill) for bill, session in list_bill_session  ]
     bill_d_table.insert(bill_details)
 
+    logging.info('Finished')
+
 if __name__ == '__main__':
     main()
-
-#change to logging
-print("\n=======================Sucess!=====================================")
-
 
 #============================================================================
 #Query MongoDB to create set of dataframes - OK this might no work so well, trying something else
