@@ -3,6 +3,7 @@ import sunlight
 import json
 import pprint
 import pandas as pd
+import requests #used to import text from URL
 
 import logging
 from optparse import OptionParser
@@ -40,18 +41,7 @@ def EstablishConnection():
 #Check connection to MongoDB
 #change to logging
 logging.info('Yes, you have a connection to MongoDB')
-
-#=======================================================================================
-# FUNCTIONS 
-#=======================================================================================
-     
-def PostDB(data, table):
-    '''
-    @param bill: Json object containing data into table
-    @param bill_table: table object to store info back in database
-    @note: originally function tried to deal with keys for Json data not in unicode format...encode these values and skip errors
-    '''   
-    table.insert(d)          
+         
 
 #=======================================================================================
 # CALL SUNLIGHT API & PUSH TO DATABASE
@@ -154,18 +144,6 @@ subjects = pd.DataFrame(db.ca_bills.aggregate([
 df_bills = pd.DataFrame(list(db.ca_bills.find()))
 df_bills_d = pd.DataFrame(list(db.bills_details.find()))
 
-
-# bills detail data query; Here query is unnecessary for converting to panda
-'''
-bd_q = db.bills_details.find({},
-            {'_id': 0, 
-             'session': 1, 'bill_id':1, 'title':1, 'sponsors':1, 'subjects':1, 'chamber':1, 'level':1,
-             'scraped_subjects':1, 'subject':1, 'summary':1, 'title':1, 'versions.url':1, 
-             'action_dates.first':1, 'action_dates.last':1,'actions.passed_upper':1,'actions.passed_lower':1,'actions.signed':1,
-             'sponsors':1,    
-             })
-'''
-
 #both committees and legislators MongoDB tables have problems converting to panda. Are these unicode problems?
 #df_comm = pd.DataFrame(list(db.committees.find()))
 #df_legis = pd.DataFrame(list(db.legislators.find()))
@@ -181,9 +159,29 @@ for row in list(db.legislators.find()):
     df_legsl.append(pd.DataFrame(row))
 
 #============================================================================
-#Next Step
+#Next Step - Get URL from bills details and texts
 #============================================================================
 
+#query database for session, bill, type, URL
+url_q = db.bills_details.find({},
+            {'_id': 0, 
+             'session': 1, 'bill_id':1, 'title':1, 'summary':1, 'versions.url':1,    
+             })
+df_url = pd.DataFrame(list(url_q))
+types = df_url.apply(lambda x: pd.lib.infer_dtype(x.values))
+
+# ERRORS - attempts to convert to types 
+for col in types[types=='unicode'].index:
+    df_url[col] = df_url[col].astype(str)
+
+#create table with session, bill, type, URL and text using packages: URLLIB & REQUESTS 
+links = []
+texts = []
+for row in df_url['versions']:
+    for r in row: 
+        for key, value in r.iteritems(): 
+            link = str(value) #create a list of dictionaries to put into panda dataframe then join
+            print list
 
 
                 
