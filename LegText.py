@@ -59,34 +59,33 @@ def main():
     logging.info('Started')
 
     #list of dictionaries
-    # url_query = db.bills_details.find({},
-    #     {'_id': 0, 
-    #         'session': 1, 'bill_id':1, 'title':1, 'subjects':1, 'versions.url':1,    
-    #     }).limit(20) #limits to 5 for testing
+    url_query = db.bills_details.find({},
+        {'_id': 'id', 
+            'session': 1, 'bill_id':1, 'title':1, 'subjects':1, 'versions.url':1,    
+        }).limit(20) #limits to 5 for testing
     
-    # lod_leg = list(url_query) #makes a list of URLs
+    lod_leg = list(url_query) #makes a list of URLs
 
-    # #Adds string type URL and legislative text 
-    # #embedded url in 'versions' - str(lod_leg[0]['versions'][0].values()[0])
+    #Adds string type URL and legislative text 
+    #embedded url in 'versions' - str(lod_leg[0]['versions'][0].values()[0])
     
-    # # for l in lod_leg[:2]: #limited to [:2] for testing and not sure of call on html limit
-    # #   for x in l['versions']:
-    # #       link = str(x.values()[0])
-    # #       l['url'] = link
-    # #       l['text'] = GetLegText(link)
+    # for l in lod_leg[:2]: #limited to [:2] for testing and not sure of call on html limit
+    #   for x in l['versions']:
+    #       link = str(x.values()[0])
+    #       l['url'] = link
+    #       l['text'] = GetLegText(link)
 
-    # for i in range(len(lod_leg)):
-    #     print "Getting text for item", i
-    #     for x in lod_leg[i]['versions']:
-    #         link = str(x.values()[0])
-    #         lod_leg[i]['url'] = link
-    #         lod_leg[i]['text'] = GetLegText(link)
+    for i in range(len(lod_leg)):
+        print "Getting text for item", i
+        for x in lod_leg[i]['versions']:
+            link = str(x.values()[0])
+            lod_leg[i]['url'] = link
+            lod_leg[i]['text'] = GetLegText(link)
 
-    # db.legtext.insert(lod_leg) #limited to [:2] for testing
-    # # -----------------using one legtext as an example---------------------------------------
+   #db.legtext.insert(lod_leg)
+    # -----------------using one legtext as an example---------------------------------------
     
-    a = GetLegText('http://leginfo.legislature.ca.gov/faces/billNavClient.xhtml?bill_id=200920100AB123') #lengthy text
-    raw = nltk.clean_html(a)
+    raw = nltk.clean_html(lod_leg[0]['text'])
     words = [w.lower() for w in nltk.wordpunct_tokenize(raw) if (w.isalpha() & (len(w) > 1)) ]
     filtered_words = [w for w in words if w not in nltk.corpus.stopwords.words('english')]
     #take out words in a stoplist
@@ -94,12 +93,14 @@ def main():
     
     wnl = nltk.WordNetLemmatizer() # removing word stems that are only a dictionary
     features = [wnl.lemmatize(t) for t in words]
+    # vectorize - save them 
+    # tuple (features, cateogry)
+    
+    # unsupervised - gensim
     print features
 
     #run through gensim to determine categories for each legislative text - lesson 15
-    print type(lod_leg)
-    for r in lod_leg: 
-        pprint.pprint(r)
+
     logging.info('Finished')
 
 #============================================================================
