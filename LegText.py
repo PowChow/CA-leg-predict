@@ -11,6 +11,7 @@ import requests #used to import text from URL
 from lxml.html import fromstring
 from lxml.html.clean import Cleaner
 import nltk
+import gensim from corpora, models, similarities
 
 import logging
 from optparse import OptionParser
@@ -18,7 +19,7 @@ import sys
 from time import time
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
-client = MongoClient('mongodb://powchow:applejacks!@oceanic.mongohq.com:10036/openstates')
+client = MongoClient('mongodb://USER:PASS@oceanic.mongohq.com:10036/openstates')
 db = client.openstates
 
 #============================================================================
@@ -82,17 +83,20 @@ def main():
             lod_leg[i]['url'] = link
             lod_leg[i]['text'] = GetLegText(link)
 
-   #db.legtext.insert(lod_leg)
+    #db.legtext.insert(lod_leg) #create a new table in MongoDB with bill text
+    for i in range(len(lod_leg)):
+        _id, text = lod_leg[i][]
+
     # -----------------using one legtext as an example---------------------------------------
     
+
     raw = nltk.clean_html(lod_leg[0]['text'])
     words = [w.lower() for w in nltk.wordpunct_tokenize(raw) if (w.isalpha() & (len(w) > 1)) ]
     filtered_words = [w for w in words if w not in nltk.corpus.stopwords.words('english')]
-    #take out words in a stoplist
-    vocab = set(words) # normalized words, build the vocabulary
+    vocab = set(filtered_words) # normalized words, build the vocabulary
     
-    wnl = nltk.WordNetLemmatizer() # removing word stems that are only a dictionary
-    features = [wnl.lemmatize(t) for t in words]
+    wnl = nltk.WordNetLemmatizer() # removing word stems 
+    features = [wnl.lemmatize(t) for t in filtered_words]
     # vectorize - save them 
     # tuple (features, cateogry)
     
@@ -103,10 +107,7 @@ def main():
 
     logging.info('Finished')
 
-#============================================================================
-#Send data to database
-#============================================================================
-    
+  
 if __name__ == '__main__':
     main()
 
