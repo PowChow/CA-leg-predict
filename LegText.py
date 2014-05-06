@@ -118,7 +118,7 @@ def main():
     id_vector = []
     [id_vector.append((id_feature[i][0], dictionary.doc2bow(id_feature[i][1]))) for i in range(len(id_feature))]
 
-    corpus_memory_friendly = MyCorpus() # doesn't load the corpus into memory!
+    #corpus_memory_friendly = MyCorpus() # doesn't load the corpus into memory!
 
     # step 1 -- initialize a model. This learns document frequencies.
     #tfidf = models.TfidfModel(vec_corpus) # this doesn't work because needs vectorized corpus
