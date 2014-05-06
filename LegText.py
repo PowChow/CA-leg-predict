@@ -2,6 +2,7 @@
 '''
 Create a list of dictionaries to perform analysis on text 
 '''
+
 from pymongo import MongoClient
 import sunlight
 import json
@@ -11,7 +12,8 @@ import requests #used to import text from URL
 from lxml.html import fromstring
 from lxml.html.clean import Cleaner
 import nltk
-import gensim from corpora, models, similarities
+from gensim import corpora, models, similarities
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 import logging
 from optparse import OptionParser
@@ -19,7 +21,7 @@ import sys
 from time import time
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
-client = MongoClient('mongodb://USER:PASS@oceanic.mongohq.com:10036/openstates')
+client = MongoClient('mongodb://USER:PASSWORD@oceanic.mongohq.com:10036/openstates')
 db = client.openstates
 
 #============================================================================
@@ -63,9 +65,10 @@ def main():
     url_query = db.bills_details.find({},
         {'_id': 'id', 
             'session': 1, 'bill_id':1, 'title':1, 'subjects':1, 'versions.url':1,    
-        }).limit(20) #limits to 5 for testing
+        }).limit(20) #limits for testing
     
     lod_leg = list(url_query) #makes a list of URLs
+    print lod_leg[0]['_id']
 
     #Adds string type URL and legislative text 
     #embedded url in 'versions' - str(lod_leg[0]['versions'][0].values()[0])
@@ -82,31 +85,53 @@ def main():
             link = str(x.values()[0])
             lod_leg[i]['url'] = link
             lod_leg[i]['text'] = GetLegText(link)
+            print lod_leg[i]['_id']
 
     #db.legtext.insert(lod_leg) #create a new table in MongoDB with bill text
+    
+    id_feature = []
+    id_text = []
+    corpus = []
+
     for i in range(len(lod_leg)):
-        _id, text = lod_leg[i][]
+        _id, text = lod_leg[i]['_id'], lod_leg[i]['text']
 
-    # -----------------using one legtext as an example---------------------------------------
-    
+        #remove common words, words of one length and tokenize
+        raw = nltk.clean_html(lod_leg[i]['text'])
+        words = [w.lower() for w in nltk.wordpunct_tokenize(raw) if (w.isalpha() & (len(w) > 1)) ]
+        words_filtered = [w for w in words if w not in nltk.corpus.stopwords.words('english')]
+        
+        # removing word stems and create a list of features 
+        wnl = nltk.WordNetLemmatizer() 
+        features = [wnl.lemmatize(t) for t in words_filtered]
 
-    raw = nltk.clean_html(lod_leg[0]['text'])
-    words = [w.lower() for w in nltk.wordpunct_tokenize(raw) if (w.isalpha() & (len(w) > 1)) ]
-    filtered_words = [w for w in words if w not in nltk.corpus.stopwords.words('english')]
-    vocab = set(filtered_words) # normalized words, build the vocabulary
+        #create list of tuples: (1) MongoDB Object_id and texts (2) MongoDB Object_id and features
+        id_text.append((_id, text))
+        id_feature.append((_id, features))
+        corpus.append(features)
     
-    wnl = nltk.WordNetLemmatizer() # removing word stems 
-    features = [wnl.lemmatize(t) for t in filtered_words]
-    # vectorize - save them 
-    # tuple (features, cateogry)
+    # Create dictionary for all leg texts and store the dictionary, for future reference  
+    dictionary = corpora.Dictionary(corpus)
+    dictionary.save('/tmp/CA-legtext.dict') 
     
-    # unsupervised - gensim
-    print features
+    #vectorize the features and add to a list of tuple (id, vector)
+    id_vector = []
+    [id_vector.append((id_feature[i][0], dictionary.doc2bow(id_feature[i][1]))) for i in range(len(id_feature))]
 
-    #run through gensim to determine categories for each legislative text - lesson 15
+    corpus_memory_friendly = MyCorpus() # doesn't load the corpus into memory!
+
+    # step 1 -- initialize a model. This learns document frequencies.
+    #tfidf = models.TfidfModel(vec_corpus) # this doesn't work because needs vectorized corpus
+
+    # step 2 -- use the model to transform bunch of vectors.
+    #corpus_tfidf = tfidf[corpus]
+
+    #lsi = models.LsiModel(corpus_tfidf, id2word=dictionary, num_topics=20) # initialize an LSI transformation
+    #corpus_lsi = lsi[corpus_tfidf] # create a double wrapper over the original corpus: bow->tfidf->fold-in-lsi
+
+    #lda = models.LdaModel(corpus, id2word=dictionary, num_topics=20, passes=20, iterations=500)
 
     logging.info('Finished')
-
   
 if __name__ == '__main__':
     main()
