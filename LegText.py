@@ -63,7 +63,7 @@ def main():
 
     #list of dictionaries
     url_query = db.bills_details.find({},
-        {'_id': 'id', 
+        {'_id': 1, 
             'session': 1, 'bill_id':1, 'title':1, 'subjects':1, 'versions.url':1,    
         }).limit(20) #limits for testing
     
