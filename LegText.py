@@ -103,22 +103,25 @@ def main():
         
         # removing word stems and create a list of features 
         wnl = nltk.WordNetLemmatizer() 
-        features = [wnl.lemmatize(t) for t in words_filtered]
+        feature = [wnl.lemmatize(t) for t in words_filtered]
 
         #create list of tuples: (1) MongoDB Object_id and texts (2) MongoDB Object_id and features
         id_text.append((_id, text))
-        id_feature.append((_id, features))
-        corpus.append(features)
+        id_feature.append((_id, feature))
+        feature_list.append(feature)
     
-    # Create dictionary for all leg texts and store the dictionary, for future reference  
-    dictionary = corpora.Dictionary(corpus)
-    dictionary.save('/tmp/CA-legtext.dict') 
-    
+    # Create dictionary for all leg texts and store the dictionary 
+    dictionary = corpora.Dictionary(feature_list)
+    dictionary.save('/tmp/CA-legtext.dict') # save for future reference 
+
     #vectorize the features and add to a list of tuple (id, vector)
     id_vector = []
-    [id_vector.append((id_feature[i][0], dictionary.doc2bow(id_feature[i][1]))) for i in range(len(id_feature))]
+    [id_vector.append( (id_feature[i][0], dictionary.doc2bow(id_feature[i][1])) ) for i in range(len(id_feature))]
 
-    corpus_memory_friendly = MyCorpus() # doesn't load the corpus into memory!
+    corpus = [dictionary.doc2bow(feature) for feature in feature_list]
+    corpora.MmCorpus.serialize('/tmp/corpus.mm', corpus) # save to memory to access one at a time
+
+    corpus_mm = corpora.MmCorpus('/tmp/corpus.mm') # loads corpus iterator
 
     # step 1 -- initialize a model. This learns document frequencies.
     #tfidf = models.TfidfModel(vec_corpus) # this doesn't work because needs vectorized corpus
