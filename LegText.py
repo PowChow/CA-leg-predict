@@ -120,13 +120,14 @@ def main():
     [id_vector.append( (id_feature[i][0], dictionary.doc2bow(id_feature[i][1])) ) for i in range(len(id_feature))]
 
     corpus = [dictionary.doc2bow(feature) for feature in feature_list]
+    #corpus_id = [dictionary.doc2bow(id_vector[i][0]) for i in id_vector] # this does not work, needs list and not tuple
     corpora.MmCorpus.serialize('/tmp/corpus.mm', corpus) # save to memory to access one at a time
-
+    
     corpus_mm = corpora.MmCorpus('/tmp/corpus.mm') # loads corpus iterator
-    print 'at the corpus'
+    logging.debug('corpus loaded')
 
     # step 1 -- initialize a model. This learns document frequencies.
-    #tfidf = models.TfidfModel(vec_corpus) # this doesn't work because needs vectorized corpus
+    #tfidf = models.TfidfModel(vec_corpus) 
 
     # step 2 -- use the model to transform bunch of vectors.
     #corpus_tfidf = tfidf[corpus]
