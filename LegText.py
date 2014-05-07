@@ -92,6 +92,7 @@ def main():
     id_feature = []
     id_text = []
     corpus = []
+    feature_list = []
 
     for i in range(len(lod_leg)):
         _id, text = lod_leg[i]['_id'], lod_leg[i]['text']
@@ -122,6 +123,7 @@ def main():
     corpora.MmCorpus.serialize('/tmp/corpus.mm', corpus) # save to memory to access one at a time
 
     corpus_mm = corpora.MmCorpus('/tmp/corpus.mm') # loads corpus iterator
+    print 'at the corpus'
 
     # step 1 -- initialize a model. This learns document frequencies.
     #tfidf = models.TfidfModel(vec_corpus) # this doesn't work because needs vectorized corpus
