@@ -9,6 +9,7 @@ import logging
 from optparse import OptionParser
 import sys
 from time import time
+import datetime
 
 # Display progress logs on stdout
 logging.basicConfig(level=logging.INFO, format '%(asctime)s %(levelname)s %(message)s')
@@ -120,17 +121,17 @@ def main():
     #API calls for bill details using unique list of bill_id & session
     #example: sunlight.openstates.bill_detail(state="CA",session='20092010', bill_id='SCR 2')
     # Question the API call here may timeout, suggestions for production / doing the call in chunks?
-    list_bill_details = [ sunlight.openstates.bill_detail(state='CA',session=session, bill_id=bill) for bill, session in list_bill_session  ]
-    bill_d_table.insert(bill_details)
+    #list_bill_details = [ sunlight.openstates.bill_detail(state='CA',session=session, bill_id=bill) for bill, session in list_bill_session  ]
+    #bill_d_table.insert(bill_details)
 
     logging.info('Finished')
 
 if __name__ == '__main__':
     main()
 
-#============================================================================
-#Query MongoDB to create set of dataframes - OK this might no work so well, trying something else
-#============================================================================
+#==================================================================================================
+#Query MongoDB to create set of dataframes - Not optimate results
+#==================================================================================================
 
 #Create unique set of values for fields and convert to PD DataFrame
 unique_s = pd.DataFrame(db.ca_bills.distinct('session'), columns = ['session'])
@@ -158,30 +159,20 @@ df_legsl = []
 for row in list(db.legislators.find()):
     df_legsl.append(pd.DataFrame(row))
 
-#============================================================================
-#Next Step - Get URL from bills details and texts
-#============================================================================
+#====================================================================================================
+#Next Step - Get URL from bills details and texts --> See CA_LegPredict.py for unsupervised modeling
+#====================================================================================================
 
-#query database for session, bill, type, URL
-url_q = db.bills_details.find({},
-            {'_id': 0, 
-             'session': 1, 'bill_id':1, 'title':1, 'summary':1, 'versions.url':1,    
-             })
-df_url = pd.DataFrame(list(url_q))
-types = df_url.apply(lambda x: pd.lib.infer_dtype(x.values))
+db.bills_details.find().sort('_id', -1).limit(1)
+q = db.bills_details.find({'session': '20112012'}, {'_id':1, 'actions.date': 1, 'actions.action': 1}).sort('actions.date', -1).limit(1)
+actdates = list(q)
+#add loop here for larger query
+#pops off the last action date in the list for one bill
+_id = actdates[0]['_id']
+last = actdates[0]['actions'].pop()
 
-# ERRORS - attempts to convert to types 
-for col in types[types=='unicode'].index:
-    df_url[col] = df_url[col].astype(str)
+proper_date = datetime.datetime.strptime(str(last['date']), '%Y-%d-%m %H:%M:%S')
 
-#create table with session, bill, type, URL and text using packages: URLLIB & REQUESTS 
-links = []
-texts = []
-for row in df_url['versions']:
-    for r in row: 
-        for key, value in r.iteritems(): 
-            link = str(value) #create a list of dictionaries to put into panda dataframe then join
-            print list
+q2 = db.bills_details.find({'session': '20112012'}, {'_id':1, 'action_dates.signed': 1, 
+                                                             'action_dates.passed_upper': 1, 'action_dates.passed.lower': 1}).sort('actions.date', -1).limit(20)
 
-
-                
