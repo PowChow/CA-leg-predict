@@ -60,7 +60,7 @@ def main():
     # pulling primary bill sponsor to match with party information 
     sponsors_query = db.bills_details.find({},
         {'_id': 1,'sponsors.leg_id':1,'sponsors.type':1,'sponsors.name':1, 
-                  'action_dates.signed': 1}).limit(50) #able to limit number of records for testing
+                  'action_dates.signed': 1}).limit(25) #able to limit number of records for testing
 
     sponsors = list(sponsors_query)
     bill_party = []
@@ -110,7 +110,7 @@ def main():
         bigram_vectorizer = TfidfVectorizer(stop_words='english', ngram_range=(1,2), token_pattern=r'\b\w+\b', min_df =1)
         analyze = bigram_vectorizer.build_analyzer()
         bigram_features = analyze(raw)
-        bill_party[i]['vec'] = bigram_vectorizer.fit_transform(bigram_features).toarray()
+        bill_party[i]['vec'] = bigram_vectorizer.transform(bigram_features).toarray()
     logging.info('loaded tfidf vectorized bigrams')
 
     # Creates numpy arrays, results = party and features = vectorized words  
@@ -131,16 +131,16 @@ def main():
     print X
     # X.toarray()
     
-    logging.info('Training Logistic model')
-    clf = LinearSVC(loss='l2')
-    print clf
-    clf = clf.fit(X,y)
-    print clf.coef_
-    print clf.intercept_
+    # logging.info('Training Logistic model')
+    # clf = LinearSVC(loss='l2')
+    # print clf
+    # clf = clf.fit(X,y)
+    # print clf.coef_
+    # print clf.intercept_
 
-    #output logistic model for prediction
-    with open('party_clf.pkl', 'wb') as mclf:
-        pickle.dump(clf, mclf)
+    # #output logistic model for prediction
+    # with open('party_clf.pkl', 'wb') as mclf:
+    #     pickle.dump(clf, mclf)
 
     logging.info('Finished')
   
