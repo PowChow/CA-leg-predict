@@ -6,6 +6,8 @@ from nltk.util import bigrams, ngrams
 import pickle
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from sklearn.svm import LinearSVC
+from sklearn.linear_model import LogisticRegression, LinearRegression
+import numpy as np
 
 import logging
 from optparse import OptionParser
@@ -58,7 +60,7 @@ def main():
     # pulling primary bill sponsor to match with party information 
     sponsors_query = db.bills_details.find({},
         {'_id': 1,'sponsors.leg_id':1,'sponsors.type':1,'sponsors.name':1, 
-                  'action_dates.signed': 1}).limit(5) #able to limit number of records for testing
+                  'action_dates.signed': 1}).limit(25) #able to limit number of records for testing
 
     sponsors = list(sponsors_query)
     bill_party = []
@@ -86,31 +88,58 @@ def main():
         bill_party.append(dict(zip(k,v)))
 
     logging.info('populated list of sponsor and party')    
-    # note to self/presentation: show number of bills sponsored by non-legislators     
+    # note to self/presentation: show number of bills sponsored by non-legislators
+    # graph bills by party that passed .....     
 
     # Do I need to create/ update a dictionary? This pulls MongoDB_Id and texts
     # all_legtext = list(db.legtext.find({}, {'text': 1}).limit(25))
 
-    #adds vectorized features of legislative text with function
+    #adds vectorized features of bigrams using function
     # for i in range(len(bill_party)):
     #     vec = GetBigramsVector(bill_party[i]['id'])
     #     bill_party[i]['vec'] = vec
     # logging.info('loaded vectorized bigrams')
+
 
     for i in range(len(bill_party)):
         #oid = bill_party[i]['id']
         print "Getting text for item", i, bill_party[i]['id']
         leg_text = list(db.legtext.find({'_id': bill_party[i]['id']}, {'text': 1}))[0]['text']
         raw = nltk.clean_html(leg_text)
-        bigram_vectorizer = CountVectorizer(ngram_range=(1, 2), token_pattern=r'\b\w+\b', min_df=1)
+        #bigram_vectorizer = CountVectorizer(ngram_range=(1, 2), token_pattern=r'\b\w+\b', min_df=1)
+        bigram_vectorizer = TfidfVectorizer(stop_words='english', ngram_range=(1,2), token_pattern=r'\b\w+\b', min_df =1)
         analyze = bigram_vectorizer.build_analyzer()
         bigram_features = analyze(raw)
         bill_party[i]['vec'] = bigram_vectorizer.fit_transform(bigram_features).toarray()
-    logging.info('loaded vectorized bigrams')
+    logging.info('loaded tfidf vectorized bigrams')
 
-    print bill_party[0]
-    print bill_party[0].values()
-    print bill_party[0].keys()
+    # Creates numpy arrays, results = party and features = vectorized words  
+    # party only = democrat or republican and vectorized text
+    bp_target = []
+    bp_data = []
+    party_options = {'democratic': 0, 'republican': 1}
+    for i in range(len(bill_party)):
+        if bill_party[i]['party'].lower() in ('democratic', 'republican'): 
+            bp_target.append( party_options[bill_party[i]['party'].lower()] )
+            bp_data.append(bill_party[i]['vec'])
+        else:
+            continue
+
+    y = np.array(bp_target)
+    print y
+    X = np.array(bp_data)
+    # X.toarray()
+    
+    logging.info('Training Logistic model')
+    clf = LinearSVC(loss='l2')
+    print clf
+    clf = clf.fit(X,y)
+    print clf.coef_
+    print clf.intercept_
+
+    #output logistic model for prediction
+    with open('party_clf.pkl', 'wb') as mclf:
+        pickle.dump(clf, mclf)
 
     logging.info('Finished')
   
