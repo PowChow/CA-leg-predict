@@ -60,7 +60,7 @@ def main():
     # pulling primary bill sponsor to match with party information 
     sponsors_query = db.bills_details.find({},
         {'_id': 1,'sponsors.leg_id':1,'sponsors.type':1,'sponsors.name':1, 
-                  'action_dates.signed': 1}).limit(25) #able to limit number of records for testing
+                  'action_dates.signed': 1}).limit(50) #able to limit number of records for testing
 
     sponsors = list(sponsors_query)
     bill_party = []
@@ -103,10 +103,10 @@ def main():
 
     for i in range(len(bill_party)):
         #oid = bill_party[i]['id']
-        print "Getting text for item", i, bill_party[i]['id']
+        #print "Getting text for item", i, bill_party[i]['id']
         leg_text = list(db.legtext.find({'_id': bill_party[i]['id']}, {'text': 1}))[0]['text']
         raw = nltk.clean_html(leg_text)
-        #bigram_vectorizer = CountVectorizer(ngram_range=(1, 2), token_pattern=r'\b\w+\b', min_df=1)
+        # bigram_vectorizer = CountVectorizer(ngram_range=(1, 2), token_pattern=r'\b\w+\b', min_df=1)
         bigram_vectorizer = TfidfVectorizer(stop_words='english', ngram_range=(1,2), token_pattern=r'\b\w+\b', min_df =1)
         analyze = bigram_vectorizer.build_analyzer()
         bigram_features = analyze(raw)
@@ -128,6 +128,7 @@ def main():
     y = np.array(bp_target)
     print y
     X = np.array(bp_data)
+    print X
     # X.toarray()
     
     logging.info('Training Logistic model')
