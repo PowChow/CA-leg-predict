@@ -5,6 +5,7 @@ import nltk
 from nltk.util import bigrams, ngrams
 import pickle
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
+from sklearn.svm import LinearSVC
 
 import logging
 from optparse import OptionParser
@@ -26,43 +27,44 @@ def GetParty(db_id):
     except:
         logging.debug('not CA legislator')
 
-def GetVectorizedText(db_id):
+def GetBigramsVector(db_id):
     """ @param db_id: MongoDB Object Id 
-    function: Cleans, tokenizes texts and creates a list of vectorized bigrams """
+    function: Returns vectorized bigrams. Cleans, tokenizes texts and creates a list of bigrams for texts """
     oid = db_id
     leg_text = list(db.legtext.find({'_id': oid}, {'text': 1}))[0]['text']
-    
-    id_feature = []
-    id_text = []
-    corpus = []
-    feature_list = []
 
-    #remove common words, words of one length and tokenize
+    # remove common words, words of one length and tokenize
     # when in the sequence should ngrams be completed // should I still go ahead with stopwords??
-    raw = nltk.clean_html(leg_text)
-    words = [w.lower() for w in nltk.wordpunct_tokenize(raw) if (w.isalpha() & (len(w) > 1)) ]
-    wnl = nltk.WordNetLemmatizer() 
-    words_lemmatize = [wnl.lemmatize(w) for w in words]  # removing word stems
-    bigrams = nltk.bigrams(words_lemmatize)
-    stopwords = nltk.corpus.stopwords.words('english')
-    pairs = [p for p in bigrams if p[0].lower() not in stopwords and p[1].lower() not in stopwords] 
+    # raw = nltk.clean_html(leg_text)
+    # words = [w.lower() for w in nltk.wordpunct_tokenize(raw) if (w.isalpha() & (len(w) > 1)) ]
+    # wnl = nltk.WordNetLemmatizer() 
+    # words_lemmatize = [wnl.lemmatize(w) for w in words]  # removing word stems
+    # bigrams = nltk.bigrams(words_lemmatize)
+    # stopwords = nltk.corpus.stopwords.words('english')
+    # pairs = [p for p in bigrams if p[0].lower() not in stopwords and p[1].lower() not in stopwords] 
 
-    #vectorize bigram
-    #return vectorized -     
+    raw = nltk.clean_html(leg_text)
+    bigram_vectorizer = CountVectorizer(ngram_range=(1, 2), token_pattern=r'\b\w+\b', min_df=1)
+    analyze = bigram_vectorizer.build_analyzer()
+    bigram_features = analyze(raw)
+
+    X = bigram_vectorizer.fit_transform(bigram_features).toarray()
+    
+    return X
 
 def main():
     
     logging.info('Started')
     # pulling primary bill sponsor to match with party information 
     sponsors_query = db.bills_details.find({},
-        {'_id': 1,'sponsors.leg_id':1,'sponsors.type':1,'sponsors.name':1, 'action_dates.signed': 1}).limit(25) #able to limit number of records for testing
+        {'_id': 1,'sponsors.leg_id':1,'sponsors.type':1,'sponsors.name':1, 
+                  'action_dates.signed': 1}).limit(5) #able to limit number of records for testing
 
     sponsors = list(sponsors_query)
     bill_party = []
     # sponsors[0]['sponsors'][0]
     # Creates list of dict: bill database ID, passed status, legislator ID and party 
     for i in range(len(sponsors)):
-        print 'getting info for item', i
         bill_dbid = sponsors[i]['_id']
         leg_id = sponsors[i]['sponsors'][0]['leg_id']
        
@@ -78,6 +80,7 @@ def main():
             bill_signed = False
         else:
             bill_signed = True
+
         k = ['id', 'leg_id', 'party','passed']
         v = [bill_dbid, leg_id, party, bill_signed]
         bill_party.append(dict(zip(k,v)))
@@ -85,14 +88,29 @@ def main():
     logging.info('populated list of sponsor and party')    
     # note to self/presentation: show number of bills sponsored by non-legislators     
 
-    # # I considered loading database ID with vectorized features from LegText.py output 
-    # id_vector = pickle.load(open('/Users/ppchow/data_science/CA-leg-predict/id_vector.txt', 'rb'))
+    # Do I need to create/ update a dictionary? This pulls MongoDB_Id and texts
+    # all_legtext = list(db.legtext.find({}, {'text': 1}).limit(25))
 
-    # Create a dictionary of all texts for sklearn
+    #adds vectorized features of legislative text with function
+    # for i in range(len(bill_party)):
+    #     vec = GetBigramsVector(bill_party[i]['id'])
+    #     bill_party[i]['vec'] = vec
+    # logging.info('loaded vectorized bigrams')
 
-    #adds vectorized features of legislative text 
-    #[bill_party[i]['vec_text'] = GetVectorizedText(bill_party[i]['id']) in i for range(len(bill_party))]
+    for i in range(len(bill_party)):
+        #oid = bill_party[i]['id']
+        print "Getting text for item", i, bill_party[i]['id']
+        leg_text = list(db.legtext.find({'_id': bill_party[i]['id']}, {'text': 1}))[0]['text']
+        raw = nltk.clean_html(leg_text)
+        bigram_vectorizer = CountVectorizer(ngram_range=(1, 2), token_pattern=r'\b\w+\b', min_df=1)
+        analyze = bigram_vectorizer.build_analyzer()
+        bigram_features = analyze(raw)
+        bill_party[i]['vec'] = bigram_vectorizer.fit_transform(bigram_features).toarray()
+    logging.info('loaded vectorized bigrams')
 
+    print bill_party[0]
+    print bill_party[0].values()
+    print bill_party[0].keys()
 
     logging.info('Finished')
   
