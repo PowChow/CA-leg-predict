@@ -110,7 +110,7 @@ def main():
         bigram_vectorizer = TfidfVectorizer(stop_words='english', ngram_range=(1,2), token_pattern=r'\b\w+\b', min_df =1)
         analyze = bigram_vectorizer.build_analyzer()
         bigram_features = analyze(raw)
-        bill_party[i]['vec'] = bigram_vectorizer.transform(bigram_features).toarray()
+        bill_party[i]['vec'] = bigram_vectorizer.fit_transform(bigram_features).toarray()
     logging.info('loaded tfidf vectorized bigrams')
 
     # Creates numpy arrays, results = party and features = vectorized words  
