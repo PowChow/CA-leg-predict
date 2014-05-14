@@ -13,7 +13,7 @@ import logging
 from optparse import OptionParser
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
-client = MongoClient('mongodb://USER:PASSWORD@oceanic.mongohq.com:10036/openstates')
+client = MongoClient('mongodb://powchow:applejacks!@oceanic.mongohq.com:10036/openstates')
 db = client.openstates
 
 # function - get party from MongoDB
@@ -29,33 +29,33 @@ def GetParty(db_id):
     except:
         logging.debug('not CA legislator')
 
-def GetBigramsVector(db_id):
-    """ @param db_id: MongoDB Object Id 
-    function: Returns vectorized bigrams. Cleans, tokenizes texts and creates a list of bigrams for texts """
-    oid = db_id
-    leg_text = list(db.legtext.find({'_id': oid}, {'text': 1}))[0]['text']
+# def GetBigramsVector(db_id):
+#     """ @param db_id: MongoDB Object Id 
+#     function: Returns vectorized bigrams. Cleans, tokenizes texts and creates a list of bigrams for texts """
+#     oid = db_id
+#     leg_text = list(db.legtext.find({'_id': oid}, {'text': 1}))[0]['text']
 
-    # remove common words, words of one length and tokenize
-    # when in the sequence should ngrams be completed // should I still go ahead with stopwords??
-    # raw = nltk.clean_html(leg_text)
-    # words = [w.lower() for w in nltk.wordpunct_tokenize(raw) if (w.isalpha() & (len(w) > 1)) ]
-    # wnl = nltk.WordNetLemmatizer() 
-    # words_lemmatize = [wnl.lemmatize(w) for w in words]  # removing word stems
-    # bigrams = nltk.bigrams(words_lemmatize)
-    # stopwords = nltk.corpus.stopwords.words('english')
-    # pairs = [p for p in bigrams if p[0].lower() not in stopwords and p[1].lower() not in stopwords] 
+#     # remove common words, words of one length and tokenize
+#     # when in the sequence should ngrams be completed // should I still go ahead with stopwords??
+#     # raw = nltk.clean_html(leg_text)
+#     # words = [w.lower() for w in nltk.wordpunct_tokenize(raw) if (w.isalpha() & (len(w) > 1)) ]
+#     # wnl = nltk.WordNetLemmatizer() 
+#     # words_lemmatize = [wnl.lemmatize(w) for w in words]  # removing word stems
+#     # bigrams = nltk.bigrams(words_lemmatize)
+#     # stopwords = nltk.corpus.stopwords.words('english')
+#     # pairs = [p for p in bigrams if p[0].lower() not in stopwords and p[1].lower() not in stopwords] 
 
-    raw = nltk.clean_html(leg_text)
-    bigram_vectorizer = CountVectorizer(ngram_range=(1, 2), token_pattern=r'\b\w+\b', min_df=1)
-    analyze = bigram_vectorizer.build_analyzer()
-    bigram_features = analyze(raw)
+#     raw = nltk.clean_html(leg_text)
+#     bigram_vectorizer = CountVectorizer(ngram_range=(1, 2), token_pattern=r'\b\w+\b', min_df=1)
+#     analyze = bigram_vectorizer.build_analyzer()
+#     bigram_features = analyze(raw)
 
-    X = bigram_vectorizer.fit_transform(bigram_features).toarray()
-    
-    return X
+#     X = bigram_vectorizer.fit_transform(bigram_features).toarray()
+#     print "Bigram vector for id %s: %s" % (str(db_id), str(X))
+#     return X
 
 def main():
-    
+    global X
     logging.info('Started')
     # pulling primary bill sponsor to match with party information 
     sponsors_query = db.bills_details.find({},
@@ -100,6 +100,8 @@ def main():
     #     bill_party[i]['vec'] = vec
     # logging.info('loaded vectorized bigrams')
 
+    bigram_vectorizer = TfidfVectorizer(stop_words='english', ngram_range=(1,2), token_pattern=r'\b\w+\b', min_df =1)
+    analyze = bigram_vectorizer.build_analyzer()
 
     for i in range(len(bill_party)):
         #oid = bill_party[i]['id']
@@ -107,10 +109,12 @@ def main():
         leg_text = list(db.legtext.find({'_id': bill_party[i]['id']}, {'text': 1}))[0]['text']
         raw = nltk.clean_html(leg_text)
         # bigram_vectorizer = CountVectorizer(ngram_range=(1, 2), token_pattern=r'\b\w+\b', min_df=1)
-        bigram_vectorizer = TfidfVectorizer(stop_words='english', ngram_range=(1,2), token_pattern=r'\b\w+\b', min_df =1)
-        analyze = bigram_vectorizer.build_analyzer()
         bigram_features = analyze(raw)
-        bill_party[i]['vec'] = bigram_vectorizer.fit_transform(bigram_features).toarray()
+        bill_party[i]['features'] = bigram_features
+        bill_party[i]['raw'] = raw
+        # bill_party[i]['vec'] = bigram_vectorizer.fit_transform(bigram_features).toarray()
+    X = bigram_vectorizer.fit_transform([x['raw'] for x in bill_party])
+    print bigram_vectorizer
     logging.info('loaded tfidf vectorized bigrams')
 
     # Creates numpy arrays, results = party and features = vectorized words  
@@ -120,14 +124,13 @@ def main():
     party_options = {'democratic': 0, 'republican': 1}
     for i in range(len(bill_party)):
         if bill_party[i]['party'].lower() in ('democratic', 'republican'): 
-            bp_target.append( party_options[bill_party[i]['party'].lower()] )
-            bp_data.append(bill_party[i]['vec'])
+            bp_target.append( party_options[bill_party[i]['party'].lower()] )            
         else:
             continue
 
     y = np.array(bp_target)
     print y
-    X = np.array(bp_data)
+    X = X.toarray()
     print X
     # X.toarray()
     
