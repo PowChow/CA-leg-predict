@@ -4,6 +4,7 @@ import pprint
 import nltk
 from nltk.util import bigrams, ngrams
 import pickle
+from sklearn import linear_model
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from sklearn.svm import LinearSVC
 from sklearn.linear_model import LogisticRegression, LinearRegression
@@ -113,7 +114,9 @@ def main():
         bill_party[i]['features'] = bigram_features
         bill_party[i]['raw'] = raw
         # bill_party[i]['vec'] = bigram_vectorizer.fit_transform(bigram_features).toarray()
-    X = bigram_vectorizer.fit_transform([x['raw'] for x in bill_party])
+    
+    party_options = {'democratic': 0, 'republican': 1}
+    X = bigram_vectorizer.fit_transform([x['raw'] for x in bill_party if x['party'].lower() in party_options])
     print bigram_vectorizer
     logging.info('loaded tfidf vectorized bigrams')
 
@@ -121,7 +124,6 @@ def main():
     # party only = democrat or republican and vectorized text
     bp_target = []
     bp_data = []
-    party_options = {'democratic': 0, 'republican': 1}
     for i in range(len(bill_party)):
         if bill_party[i]['party'].lower() in ('democratic', 'republican'): 
             bp_target.append( party_options[bill_party[i]['party'].lower()] )            
@@ -132,18 +134,32 @@ def main():
     print y
     X = X.toarray()
     print X
-    # X.toarray()
     
-    # logging.info('Training Logistic model')
-    # clf = LinearSVC(loss='l2')
-    # print clf
-    # clf = clf.fit(X,y)
-    # print clf.coef_
-    # print clf.intercept_
+    #=====================================================================================
+    # Train different models - Linear, Logistic, Random Forests, Naive Bayes
+    #=====================================================================================
 
-    # #output logistic model for prediction
-    # with open('party_clf.pkl', 'wb') as mclf:
-    #     pickle.dump(clf, mclf)
+    logging.info('Linear Support Vector Classification')
+    clf = LinearSVC(loss='l2')
+    print clf
+    clf = clf.fit(X,y)
+    print 'LinearSVC Coef', clf.coef_
+    print 'LinearSVC Intercept', clf.intercept_
+
+    with open('party_linearSVC.pkl', 'wb') as mclf:
+        pickle.dump(clf, mclf)
+    logging.info('output LinearSVC to party_linearSVC.pkl')
+
+    logging.info('Logistics Regression')
+    logreg = linear_model.LogisticRegression(C=1.0)
+    logreg.fit(X, y)
+    print 'LogReg Coef', logreg.coef_
+    print 'LogReg Intercept', logreg.intercept_
+
+    with open('party_linearSVC.pkl', 'wb') as lr:
+        pickle.dump(logreg, lr)
+    logging.info('output Logistic regression to party_logreg.pkl')
+
 
     logging.info('Finished')
   
