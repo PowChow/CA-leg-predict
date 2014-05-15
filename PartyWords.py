@@ -130,10 +130,11 @@ def main():
     logging.info('output LinearSVC to party_linearSVC.pkl')
 
     X_train, X_test, y_train, y_test = cross_validation.train_test_split(data, targets, test_size=0.4, random_state=0)
-    print 'training', X_train.shape, y_train.shape
-    print 'testing', X_test.shape, y_test.shape
     clfCV = svm.SVC(kernel='linear', C=1).fit(X_train, y_train)
-    print 'R2/score', clf.score(X_test, y_test) 
+    print 'training shape', X_train.shape, y_train.shape
+    print 'testing shape', X_test.shape, y_test.shape
+    print 'Test Score', clfCV.score(X_test, y_test)
+    print 'Train Score', clfCV.score(X_train, y_train)
 
     # Logistic Regression 
     logging.info('Logistic Regression')
