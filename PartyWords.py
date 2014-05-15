@@ -4,11 +4,14 @@ import pprint
 import nltk
 from nltk.util import bigrams, ngrams
 import pickle
-from sklearn import linear_model
+from sklearn import linear_model, cross_validation, svm
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from sklearn.svm import LinearSVC
 from sklearn.linear_model import LogisticRegression, LinearRegression
+from sklearn.ensemble import (RandomForestClassifier, ExtraTreesClassifier, AdaBoostClassifier)
+from sklearn.tree import DecisionTreeClassifier
 import numpy as np
+import pylab as party_linearSVC
 
 import logging
 from optparse import OptionParser
@@ -30,30 +33,6 @@ def GetParty(db_id):
     except:
         logging.debug('not CA legislator')
 
-# def GetBigramsVector(db_id):
-#     """ @param db_id: MongoDB Object Id 
-#     function: Returns vectorized bigrams. Cleans, tokenizes texts and creates a list of bigrams for texts """
-#     oid = db_id
-#     leg_text = list(db.legtext.find({'_id': oid}, {'text': 1}))[0]['text']
-
-#     # remove common words, words of one length and tokenize
-#     # when in the sequence should ngrams be completed // should I still go ahead with stopwords??
-#     # raw = nltk.clean_html(leg_text)
-#     # words = [w.lower() for w in nltk.wordpunct_tokenize(raw) if (w.isalpha() & (len(w) > 1)) ]
-#     # wnl = nltk.WordNetLemmatizer() 
-#     # words_lemmatize = [wnl.lemmatize(w) for w in words]  # removing word stems
-#     # bigrams = nltk.bigrams(words_lemmatize)
-#     # stopwords = nltk.corpus.stopwords.words('english')
-#     # pairs = [p for p in bigrams if p[0].lower() not in stopwords and p[1].lower() not in stopwords] 
-
-#     raw = nltk.clean_html(leg_text)
-#     bigram_vectorizer = CountVectorizer(ngram_range=(1, 2), token_pattern=r'\b\w+\b', min_df=1)
-#     analyze = bigram_vectorizer.build_analyzer()
-#     bigram_features = analyze(raw)
-
-#     X = bigram_vectorizer.fit_transform(bigram_features).toarray()
-#     print "Bigram vector for id %s: %s" % (str(db_id), str(X))
-#     return X
 
 def main():
     global X
@@ -130,36 +109,55 @@ def main():
         else:
             continue
 
-    y = np.array(bp_target)
-    print y
-    X = X.toarray()
-    print X
+    targets = np.array(bp_target)
+    data = X.toarray()
     
     #=====================================================================================
-    # Train different models - Linear, Logistic, Random Forests, Naive Bayes
+    # Train different models - Linear, Logistic, Random Linear
     #=====================================================================================
 
+    #  Supported Vector Classification
     logging.info('Linear Support Vector Classification')
     clf = LinearSVC(loss='l2')
     print clf
-    clf = clf.fit(X,y)
+    clf = clf.fit(data,targets)
     print 'LinearSVC Coef', clf.coef_
     print 'LinearSVC Intercept', clf.intercept_
+    print 'LinearSVC Score/R2', clf.score(data,targets)
 
     with open('party_linearSVC.pkl', 'wb') as mclf:
         pickle.dump(clf, mclf)
     logging.info('output LinearSVC to party_linearSVC.pkl')
 
-    logging.info('Logistics Regression')
-    logreg = linear_model.LogisticRegression(C=1.0)
-    logreg.fit(X, y)
-    print 'LogReg Coef', logreg.coef_
-    print 'LogReg Intercept', logreg.intercept_
+    X_train, X_test, y_train, y_test = cross_validation.train_test_split(data, targets, test_size=0.4, random_state=0)
+    print 'training', X_train.shape, y_train.shape
+    print 'testing', X_test.shape, y_test.shape
+    clfCV = svm.SVC(kernel='linear', C=1).fit(X_train, y_train)
+    print 'R2/score', clf.score(X_test, y_test) 
 
-    with open('party_linearSVC.pkl', 'wb') as lr:
-        pickle.dump(logreg, lr)
-    logging.info('output Logistic regression to party_logreg.pkl')
+    # Logistic Regression 
+    logging.info('Logistic Regression')
+    # Insert GridSearch Here
+    logreg_l1 = linear_model.LogisticRegression(C=1.0, penalty='l1')
+    logreg_l2 = linear_model.LogisticRegression(C=1.0, penalty='l2')
+    logreg_l1.fit(data,targets)
+    logreg_l2.fit(data,targets)
 
+    print 'Pseudo-R2 penalty l1', logreg_l1.score(data,targets)
+    print 'Pseudo-R2 penalty l2', logreg_l2.score(data,targets)
+    print 'LogReg l1 Coef', logreg_l1.coef_
+    print 'LogReg l1 Intercept', logreg_l1.intercept_
+
+    with open('party_logreg_l1.pkl', 'wb') as lr1:
+        pickle.dump(logreg_l1, lr1)
+    logging.info('output Logistic regression to party_logreg_l1.pkl')
+
+    with open('party_logreg_l2.pkl', 'wb') as lr2:
+        pickle.dump(logreg_l2, lr2)
+    logging.info('output Logistic regression to party_logreg_l2.pkl')
+
+    # Random Forests
+    # See other python file
 
     logging.info('Finished')
   
