@@ -4,7 +4,7 @@ Create a list of dictionaries to perform analysis on text
 '''
 
 from pymongo import MongoClient
-import sunlight
+#import sunlight
 import json
 import pprint
 import pandas as pd
@@ -22,7 +22,7 @@ import sys
 from time import time
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
-client = MongoClient('mongodb://USER:PASSWORD@oceanic.mongohq.com:10036/openstates')
+client = MongoClient('mongodb://galaHELP:pythonisfun!@oceanic.mongohq.com:10036/openstates')
 db = client.openstates
 
 #============================================================================
@@ -58,6 +58,7 @@ def GetLegText(link):
 def main():
     
     logging.info('Started')
+    print 'Started'
     #============================================================================
     #Transform data - pull bills and url from MongoDB to get html text and clean
         #only need to do this once 
@@ -89,7 +90,7 @@ def main():
     #============================================================================
     # Natural Language Processing - get text from database and prepare for models
     #============================================================================
-    lod_leg = list(db.legtext.find().limit(10)) 
+    lod_leg = list(db.legtext.find()) 
 
     id_feature = []
     id_text = []
@@ -124,21 +125,19 @@ def main():
     #============================================================================
 
     # LOAD DICTIONARY
-    # dictionary = corpora.Dictionary.load('/Users/ppchow/data_science/CA-leg-predict/tmp/legtext.dict')
-    # print dictionary
+    dictionary = corpora.Dictionary.load('/Users/ppchow/data_science/CA-leg-predict/tmp/legtext.dict')
+    print dictionary
 
-    # #vectorize the features and add to a list of tuple (id, vector)
-    # id_vector = []
-    # [id_vector.append( (id_feature[i][0], dictionary.doc2bow(id_feature[i][1])) ) for i in range(len(id_feature))]
+    #vectorize the features and add to a list of tuple (id, vector)
+    id_vector = []
+    [id_vector.append( (id_feature[i][0], dictionary.doc2bow(id_feature[i][1])) ) for i in range(len(id_feature))]
 
-    # # output IDs associated with features and vectors for each document
-    # with open('id_feature.txt', 'wb') as ff:
-    #     pickle.dump(id_feature, ff)
-    
-    # with open('id_vector.txt', 'wb') as fv:
-    #     pickle.dump(id_vector, fv)
-
-    # print 'output to file'  
+    # output IDs associated with features and vectors for each document
+    with open('/tmp/id_feature_50.txt', 'wb') as ff:
+        pickle.dump(id_feature, ff)  
+    with open('/tmp/id_vector_50.txt', 'wb') as fv:
+        pickle.dump(id_vector, fv)
+    logging('output to files')  
 
     #vectorize: turn each document (list of works) into a vectorized bag of words
     # corpus = [dictionary.doc2bow(feature) for feature in feature_list]
@@ -146,56 +145,52 @@ def main():
     # print 'saved corpus'
     
     # LOAD corpus 
-    # corpus_mm = corpora.MmCorpus('/Users/ppchow/data_science/CA-leg-predict/tmp/corpus.mm')
-    # print corpus_mm
+    corpus_mm = corpora.MmCorpus('/Users/ppchow/data_science/CA-leg-predict/tmp/corpus.mm')
+    print corpus_mm
 
     # print 'step 1 - intializing model'
-    # step 1 -- initialize a model. This learns document frequencies.
-    # tfidf = models.TfidfModel(corpus_mm) 
+    #step 1 -- initialize a model. This learns document frequencies.
+    tfidf = models.TfidfModel(corpus_mm) 
 
-    # # print 'step 2 - use model to transform bunch of vectors'
+    # print 'step 2 - use model to transform bunch of vectors'
     # step 2 -- use the model to transform bunch of vectors.
-    # corpus_tfidf = tfidf[corpus_mm]
+    corpus_tfidf = tfidf[corpus_mm]
 
     # sunlight subject data about 45 categories
-    # print 'running LSI model'
-    # lsi = models.LsiModel(corpus_tfidf, id2word=dictionary, num_topics=100) # initialize an LSI transformation
-    # lsi.save('/Users/ppchow/data_science/CA-leg-predict/tmp/lsi_model.pkl')
+    logging('running LSI model')
+    lsi = models.LsiModel(corpus_tfidf, id2word=dictionary, num_topics=50) # initialize an LSI transformation
+    lsi.save('/Users/ppchow/data_science/CA-leg-predict/tmp/lsi_model_50.pkl')
+    corpus_lsi = lsi[corpus_tfidf] # create a double wrapper over the original corpus: bow->tfidf->fold-in-lsi
+    corpus_lsi.save('/Users/ppchow/data_science/CA-leg-predict/tmp/corpus_lsi_model_50.pkl')
+    print 'lsi model completed'
 
-    # corpus_lsi = lsi[corpus_tfidf] # create a double wrapper over the original corpus: bow->tfidf->fold-in-lsi
-    # corpus_lsi.save('/Users/ppchow/data_science/CA-leg-predict/tmp/corpus_lsi_model.pkl')
-    # print 'lsi model completed'
-
-    # print 'running LDA models'
-    # lda_tfidf = models.LdaModel(corpus_tfidf, id2word=dictionary, num_topics=100, update_every=1, chunksize=1000, passes=1, iterations=500) #model easier to interpert results
-    # lda_tfidf.save('/Users/ppchow/data_science/CA-leg-predict/tmp/lsa_tfidf_model.pkl')
-   
-    # corpus_lda = models.LdaModel(corpus_mm, id2word=dictionary, num_topics=100, update_every=1, chunksize=1000, passes=1, iterations=500) #model easier to interpert results
-    # corpus_lda.save('/Users/ppchow/data_science/CA-leg-predict/tmp/corpus_lda_model.pkl')
-    # print 'lda model completed'
+    logging('running LDA models')
+    lda_tfidf = models.LdaModel(corpus_tfidf, id2word=dictionary, num_topics=50, update_every=1, chunksize=1000, passes=1, iterations=500) #model easier to interpert results
+    lda_tfidf.save('/Users/ppchow/data_science/CA-leg-predict/tmp/lsa_tfidf_model_50.pkl')
+    print 'lda model completed'
 
     #============================================================================
     # ANALYSIS - Load corpus, dictionary, models and python lists
     #============================================================================
 
-    # LOAD DICTIONARY
-    dictionary = corpora.Dictionary.load('/Users/ppchow/data_science/CA-leg-predict/tmp/legtext.dict')
+    # # LOAD DICTIONARY
+    # dictionary = corpora.Dictionary.load('/Users/ppchow/data_science/CA-leg-predict/tmp/legtext.dict')
     
-    # LOAD CORPUS 
-    corpus_mm = corpora.MmCorpus('/Users/ppchow/data_science/CA-leg-predict/tmp/corpus.mm')
+    # # LOAD CORPUS 
+    # corpus_mm = corpora.MmCorpus('/Users/ppchow/data_science/CA-leg-predict/tmp/corpus.mm')
  
-    # LOAD MODELS
-    lsi_model = models.LsiModel.load('/Users/ppchow/data_science/CA-leg-predict/tmp/lsi_model.pkl')
-    # lda_corpus_model = models.LdaModel.load('/Users/ppchow/data_science/CA-leg-predict/tmp/lsa_model.pkl')
-    lda_tfidf_model = models.LdaModel.load('/Users/ppchow/data_science/CA-leg-predict/tmp/lsa_tfidf_model.pkl')
+    # # LOAD MODELS
+    # lsi_model = models.LsiModel.load('/Users/ppchow/data_science/CA-leg-predict/tmp/lsi_model.pkl')
+    # # lda_corpus_model = models.LdaModel.load('/Users/ppchow/data_science/CA-leg-predict/tmp/lsa_model.pkl')
+    # lda_tfidf_model = models.LdaModel.load('/Users/ppchow/data_science/CA-leg-predict/tmp/lsa_tfidf_model.pkl')
     
-    # PRINT MODEL TOPICS
-    print 'lsi model'
-    print lsi_model.print_topics(25)
-    print 'lda corpus model'
-    print lda_corpus_model.print_topics(25)
-    print 'lsi tfidf model'
-    print lda_tfidf_model.print_topics(25)
+    # # PRINT MODEL TOPICS
+    # print 'lsi model'
+    # print lsi_model.print_topics(25)
+    # print 'lda corpus model'
+    # print lda_corpus_model.print_topics(25)
+    # print 'lsi tfidf model'
+    # print lda_tfidf_model.print_topics(25)
 
 
     logging.info('Finished')

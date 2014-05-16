@@ -55,69 +55,37 @@ def main():
     #Query MongoDB to pull relevant data 
     #==================================================================================================
 
-    #query creates list of dicts including: 
-    #   ObjectID (_id) - unique MongoDB indentifier - , id (other bill id), sponsors (list of info - leg_id of primary sponsor will be used to match with legislator table)
-    #   action_dates (information from these files will help us determine whether the bill passed or not. If action_dates.signed = None then it did not pass. However the data for pre 2012 looks shakey)
+    # try:
+    #     bills_details = list(db.bills_details.find({'state':'ca', 'type': 'bill'}, 
+    #         {'_id': 1, 'session':1, 'chamber': 1, 'sponsors': 1, 'sponsors.leg_id':1, 'scraped_subjects': 1, 'subjects':1, 'type': 1,
+    #         'action_dates': 1, 'votes': 1, 'actions': 1}).limit(10000) )
+
+    #     legis_details = list(db.legislators.find({'state': 'ca','level':'state'}, 
+    #         {'_id': 1,'leg_id': 1,'party': 1,'district': 1,'active': 1 ,'chamber': 1}).limit(10000) )
+
+    #     logger.info('Data succesfully obtained from MongoDB.\n')
+    # except:
+    #     logger.info('Something went with wrong Querying MongoDB.\n')
+    #     pass
     
-    try:
-        bills_details = list(db.bills_details.find({'state':'ca', 'type': 'bill'}, 
-            {'_id': 1, 'session':1, 'chamber': 1, 'sponsors': 1, 'sponsors.leg_id':1, 'scraped_subjects': 1, 'subjects':1, 'type': 1,
-            'action_dates': 1, 'votes': 1, 'actions': 1}).limit(1000) )
+    bills_details = list(db.bills_details.find({'state':'ca', 'type': 'bill'}, 
+        {'_id': 1, 'session':1, 'chamber': 1, 'sponsors': 1, 'sponsors.leg_id':1, 'scraped_subjects': 1, 'subjects':1, 'type': 1,
+           'action_dates': 1, 'votes': 1, 'actions': 1}).limit(5000) )
 
-        legis_details = list(db.legislators.find({'state': 'ca','level':'state'}, 
-            {'_id': 1,'leg_id': 1,'party': 1,'district': 1,'active': 1 ,'chamber': 1}).limit(1000) )
+    legis_details = list(db.legislators.find({'state': 'ca','level':'state'}, 
+            {'_id': 1,'leg_id': 1,'party': 1,'district': 1,'active': 1 ,'chamber': 1}).limit(5000) )
 
-        logger.info('Data succesfully obtained from MongoDB.\n')
-    except:
-        logger.info('Something went with Querying MongoDB.\n')
-        pass
+    logger.info('Data succesfully obtained from MongoDB.\n')
 
-       
-    # query creats list of all CA committees
-    
-    #comm = list(db.committees.find({'state': 'ca'}))
-    
-    #another query option but I think the above one is more efficient
-    #ucomm = list(db.committees.aggregate([{'$match':  {'state': 'ca'}}, {'$group': {'_id': '$committee'}} ]).values()[1])
-
-    #pull demographic data by legislative districts - see email and files I attached 
-
-    #total_bills = db.bills_details.find( {'action_dates.signed': {'$ne': None } }).count()
-
-    #counts bills in each session with null/None values in action_dates.signed
-    #this portion brings the query into a list of dict
-    # grp_session = list(db.bills_details.aggregate([
-    #             {'$project': {'session':1}},
-    #             {'$group': {'_id': '$session', 'count':{'$sum':1}}}
-    #             ]).values()[1])
-
-    # #print grp_session
-
-    #doesn't work, need to figure out how to get group by session + count null/None
-    # db.bills_details.aggregate([
-    #                 {'$project': {'session':1, 'action.dates': 1}},
-    #                 {'$match': {'action_dates.signed': {'$ne': None } }},
-    #                 {'$group': {'_id': '$session', 'count':{'$sum':1}}}
-    # ])
-
-    #print db.bills_details.find( {'session': '20112012', 'action_dates.signed': {'$ne': None } }).count()
-
-    #doesn't work, need to figure out how to get group by session + count null/None
-    # db.ca_bills.aggregate([
-    #     {'$project': {'subjects':1}},
-    #     {'$unwind': '$subjects'},
-    #     {'$group': {'_id': '$subjects', 'count':{'$sum':1}}}
-    # ])
-    
     logger.info('Creating legis dataframe...........\n')
-    legis_df = pd.DataFrame(legis_details)
+    df_legis = pd.DataFrame(legis_details)
     df_bills_d = pd.DataFrame(bills_details)
     logger.info('Finished creating DataFrame........\n')
 
     logger.info('Uploading median income by district data')
     fnames = np.array(['locations', 'district', 'chamber', 'med_ann_income'])
     income_df = pd.read_csv('/Users/ppchow/data_science/CA-leg-predict/Med_Family_Income_20082012.csv', names=fnames)
-    legis_income_df = pd.merge(income_df, legis_df, on=['chamber', 'district'], how='right')
+    legis_income_df = pd.merge(income_df, df_legis, on=['chamber', 'district'], how='right')
     legis_income_df = legis_income_df.drop(['_id', 'district', 'chamber'], axis=1)
     logger.info('Combined legislation and income dataframes')
 
@@ -129,8 +97,8 @@ def main():
     df_bills_d['leg_id'] = df_bills_d['sponsors'].map(lambda lst: lst[0]['leg_id'])
     df_bills_d = df_bills_d.drop(['action_dates', 'actions', 'session', 'subjects', 'scraped_subjects', 'votes', 'type', 'sponsors'], axis = 1)
     df_bills_d.fillna(0, inplace = True)   
-    df_bills_d_merged = pd.merge(legis_income_df, df_bills_d, on='leg_id', how='right')
-    print df_bills_d_merged
+    df_bills_d_merged = pd.merge(legis_income_df, df_bills_d, on='leg_id', how='outer')
+    print 'Prints Merged Dataframe', df_bills_d_merged
     logger.info('Done applying transformation to DataFrame........\n')
 
 
@@ -202,17 +170,6 @@ def coSponsors(lst):
         if e['type'] == 'cosponsor':
             i += 1
     return i
-
-
-# def subjects(lst, lst2):
-#     #scraped = str(lst2[0].encode('ascii', 'ignore'))
-#     print lst, lst2, lst2[0]
-#     # scarped = str(lst2[0])
-#     # if lst == []: 
-#     #     if scraped != []:
-#     #         return scraped[:scraped.find(':')]
-#     # else: 
-#     #     return lst
 
 #////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #////////////////////////////////////////////////////////////////////////////////////////////////////////////////

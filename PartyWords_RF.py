@@ -24,7 +24,7 @@ import logging
 from optparse import OptionParser
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
-client = MongoClient('mongodb://powchow:applejacks!@oceanic.mongohq.com:10036/openstates')
+client = MongoClient('mongodb://galaHELP:pythonisfun!@oceanic.mongohq.com:10036/openstates')
 db = client.openstates
 
 # function - get party from MongoDB
@@ -46,7 +46,7 @@ def main():
     # pulling primary bill sponsor to match with party information 
     sponsors_query = db.bills_details.find({},
         {'_id': 1,'sponsors.leg_id':1,'sponsors.type':1,'sponsors.name':1, 
-                  'action_dates.signed': 1}).limit(25) #able to limit number of records for testing
+                  'action_dates.signed': 1}) #able to limit number of records for testing
 
     sponsors = list(sponsors_query)
     bill_party = []
@@ -124,7 +124,7 @@ def main():
     
     # Parameters
     n_classes = 2
-    n_estimators = 100
+    n_estimators = 30
     plot_colors = "ryb"
     cmap = pl.cm.RdYlBu
     plot_step = 0.02  # fine step width for decision surface contours

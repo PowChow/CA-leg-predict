@@ -17,7 +17,7 @@ import logging
 from optparse import OptionParser
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
-client = MongoClient('mongodb://powchow:applejacks!@oceanic.mongohq.com:10036/openstates')
+client = MongoClient('mongodb://galaHELP:pythonisfun!@oceanic.mongohq.com:10036/openstates')
 db = client.openstates
 
 # function - get party from MongoDB
@@ -131,6 +131,7 @@ def main():
 
     X_train, X_test, y_train, y_test = cross_validation.train_test_split(data, targets, test_size=0.4, random_state=0)
     clfCV = svm.SVC(kernel='linear', C=1).fit(X_train, y_train)
+    print clfCV
     print 'training shape', X_train.shape, y_train.shape
     print 'testing shape', X_test.shape, y_test.shape
     print 'Test Score', clfCV.score(X_test, y_test)
@@ -144,6 +145,8 @@ def main():
     logreg_l1.fit(data,targets)
     logreg_l2.fit(data,targets)
 
+    print logreg_l1
+    print logreg_l2
     print 'Pseudo-R2 penalty l1', logreg_l1.score(data,targets)
     print 'Pseudo-R2 penalty l2', logreg_l2.score(data,targets)
     print 'LogReg l1 Coef', logreg_l1.coef_
