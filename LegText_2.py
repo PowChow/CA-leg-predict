@@ -92,14 +92,17 @@ def main():
     #============================================================================
     lod_leg = list(db.legtext.find()) 
 
-    id_feature = []
-    id_text = []
-    corpus = []
-    feature_list = []
+    # id_feature = []
+    # id_text = []
+    # corpus = []
+    # feature_list = []
+    url_feature = []
 
     for i in xrange(len(lod_leg)):
 
-        _id, text = lod_leg[i]['_id'], lod_leg[i]['text']
+        # choose which feature to extra for legislative text
+        # _id, text = lod_leg[i]['_id'], lod_leg[i]['text']
+        url, text = lod_leg[i]['url'], lod_leg[i]['text']
 
         soup = BeautifulSoup(lod_leg[i]['text'], "html.parser")
         raw = soup.get_text()  
@@ -114,12 +117,14 @@ def main():
         #create list of tuples: 
         #(1) MongoDB Object_id and texts 
         #(2) MongoDB Object_id and features
-        id_text.append((_id, text))
-        id_feature.append((_id, feature))
-        feature_list.append(feature)  
+        #(3) URL and features
+        # id_text.append((_id, text))
+        # id_feature.append((_id, feature))
+        # feature_list.append(feature) 
+        url_feature.append((url, feature)) 
 
     # dump feature_list for later use
-    pickle.dump( feature_list, open('./saved_models/feature_list.p', 'wb'))
+    pickle.dump( url_feature, open('./saved_models/url_feature_list_tuple.p', 'wb'))
 
     # # # CREATE DICTIONARY for all leg texts and store the dictionary - only need to do once
     # dictionary = corpora.Dictionary(feature_list)
@@ -131,9 +136,9 @@ def main():
     # RUNNING LDA and LSI models - load dictionary and corpus
     #============================================================================
 
-    # # LOAD DICTIONARY
+    # LOAD DICTIONARY & FEATURE LIST
     # dictionary = corpora.Dictionary.load('./saved_models/legtext.dict')
-    #print dictionary
+    #feature_list = pickle.load(open('./saved_models/feature_list.p', 'rb'))
 
     # #vectorize the features and add to a list of tuple (id, vector)
     # id_vector = []
@@ -146,10 +151,10 @@ def main():
     #     pickle.dump(id_vector, fv)
     # logging('output to files')  
 
-    # #vectorize: turn each document (list of works) into a vectorized bag of words
-    # # corpus = [dictionary.doc2bow(feature) for feature in feature_list]
-    # # corpora.MmCorpus.serialize('/Users/ppchow/data_science/CA-leg-predict/tmp/corpus.mm', corpus) 
-    # # print 'saved corpus'
+    #vectorize: turn each document (list of works) into a vectorized bag of words
+    # corpus = [dictionary.doc2bow(feature) for feature in feature_list]
+    # corpora.MmCorpus.serialize('/Users/ppchow/data_science/CA-leg-predict/tmp/corpus.mm', corpus) 
+    # print 'saved corpus'
     
     # # LOAD corpus 
     # corpus_mm = corpora.MmCorpus('./saved_models/corpus.mm')
@@ -164,28 +169,33 @@ def main():
     # corpus_tfidf = tfidf[corpus_mm]
 
     # # sunlight subject data about 50 categories
-    # logging('running LSI model')
+    # logging.info('running LSI model 50')
     # lsi = models.LsiModel(corpus_tfidf, id2word=dictionary, num_topics=50) # initialize an LSI transformation
-    # lsi.save('./saved_models/lsi_model_50.pkl')
-    
+    # lsi.save('./saved_models/lsi_tfidf_model_50.pkl')
     # corpus_lsi = lsi[corpus_tfidf] # create a double wrapper over the original corpus: bow->tfidf->fold-in-lsi
     # corpus_lsi.save('./saved_models/with_corpus_lsi_model_50.pkl')
     # print 'lsi model completed'
 
-    # logging('running LDA models')
+    # logging.info('running LDA models 50')
     # lda_tfidf = models.LdaModel(corpus_tfidf, id2word=dictionary, 
     #               num_topics=50, update_every=1, chunksize=1000, passes=1, iterations=500) 
-    # lda_tfidf.save('./saved_models/lsa_tfidf_model_50.pkl')
+    # lda_tfidf.save('./saved_models/lda_tfidf_model_50.pkl')
+    # print 'lda model completed'
+
+    # logging.info('running LDA models 100')
+    # lda_tfidf = models.LdaModel(corpus_tfidf, id2word=dictionary, 
+    #               num_topics=100, update_every=1, chunksize=1000, passes=1, iterations=500) 
+    # lda_tfidf.save('./saved_models/lda_tfidf_model_100.pkl')
     # print 'lda model completed'
 
     #============================================================================
     # LOAD TO CREATE WORD2VEC MODEL
     #============================================================================
+    # feature_list = pickle.load(open('./saved_models/feature_list.p', 'rb'))
 
-    bigram_transformer = models.Phrases(feature_list)
-    model_w2v = models.Word2Vec(bigram_transformer, size=100, window=5, 
-        min_count=5, workers=4)
-    model_w2v.save('./saved_models/word2vec_model.pkl')
+    # bigram_transformer = models.Phrases(feature_list)
+    # model_w2v = models.Word2Vec(bigram_transformer[feature_list], size=100, window=5, min_count=5, workers=4)
+    # model_w2v.save('./saved_models/word2vec_phrased_model.pkl')
 
     #============================================================================
     # ANALYSIS - Load corpus, dictionary, models and python lists
@@ -199,8 +209,8 @@ def main():
  
     # # LOAD MODELS
     # lsi_model = models.LsiModel.load('./saved_models/lsi_model.pkl')
-    # lda_corpus_model = models.LdaModel.load('./saved_models/lsa_model.pkl')
-    # lda_tfidf_model = models.LdaModel.load('./saved_models/lsa_tfidf_model.pkl')
+    # lda_corpus_model = models.LdaModel.load('./saved_models/lda_model.pkl')
+    # lda_tfidf_model = models.LdaModel.load('./saved_models/lda_tfidf_model_100.pkl')
     
     # # PRINT MODEL TOPICS
     # print 'lsi model', lsi_model
