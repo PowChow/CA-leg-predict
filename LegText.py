@@ -8,9 +8,9 @@ from pymongo import MongoClient
 import json
 import pprint
 import pandas as pd
-import requests #used to import text from URL
-from lxml.html import fromstring
-from lxml.html.clean import Cleaner
+import requests 
+# from lxml.html import fromstring
+# from lxml.html.clean import Cleaner
 import nltk
 import pickle
 from gensim import corpora, models, similarities
@@ -90,108 +90,108 @@ def main():
     #============================================================================
     # Natural Language Processing - get text from database and prepare for models
     #============================================================================
-    lod_leg = list(db.legtext.find()) 
+    # lod_leg = list(db.legtext.find()) 
 
-    id_feature = []
-    id_text = []
-    corpus = []
-    feature_list = []
+    # id_feature = []
+    # id_text = []
+    # corpus = []
+    # feature_list = []
 
-    for i in range(len(lod_leg)):
-        _id, text = lod_leg[i]['_id'], lod_leg[i]['text']
+    # for i in range(len(lod_leg)):
+    #     _id, text = lod_leg[i]['_id'], lod_leg[i]['text']
 
-        #remove common words, words of one length and tokenize
-        raw = nltk.clean_html(lod_leg[i]['text'])
-        words = [w.lower() for w in nltk.wordpunct_tokenize(raw) if (w.isalpha() & (len(w) > 1)) ]
-        words_filtered = [w for w in words if w not in nltk.corpus.stopwords.words('english')]
+    #     #remove common words, words of one length and tokenize
+    #     raw = nltk.clean_html(lod_leg[i]['text'])
+    #     words = [w.lower() for w in nltk.wordpunct_tokenize(raw) if (w.isalpha() & (len(w) > 1)) ]
+    #     words_filtered = [w for w in words if w not in nltk.corpus.stopwords.words('english')]
         
-        # removing word stems and create a list of features 
-        wnl = nltk.WordNetLemmatizer() 
-        feature = [wnl.lemmatize(t) for t in words_filtered]
+    #     # removing word stems and create a list of features 
+    #     wnl = nltk.WordNetLemmatizer() 
+    #     feature = [wnl.lemmatize(t) for t in words_filtered]
 
-        #create list of tuples: (1) MongoDB Object_id and texts (2) MongoDB Object_id and features
-        id_text.append((_id, text))
-        id_feature.append((_id, feature))
-        feature_list.append(feature)  
+    #     #create list of tuples: (1) MongoDB Object_id and texts (2) MongoDB Object_id and features
+    #     id_text.append((_id, text))
+    #     id_feature.append((_id, feature))
+    #     feature_list.append(feature)  
     
-    # # CREATE DICTIONARY for all leg texts and store the dictionary - only need to do once
-    # dictionary = corpora.Dictionary(feature_list)
-    # dictionary.compactify() # remove gaps in id sequence after words that were removed
-    # dictionary.save('/Users/ppchow/data_science/CA-leg-predict/tmp/legtext.dict') # save for future reference 
-    # print 'saved dictionary'
+    # # # CREATE DICTIONARY for all leg texts and store the dictionary - only need to do once
+    # # dictionary = corpora.Dictionary(feature_list)
+    # # dictionary.compactify() # remove gaps in id sequence after words that were removed
+    # # dictionary.save('/Users/ppchow/data_science/CA-leg-predict/tmp/legtext.dict') # save for future reference 
+    # # print 'saved dictionary'
 
-    #============================================================================
-    # RUNNING LDA and LSI models - load dictionary and corpus
-    #============================================================================
+    # #============================================================================
+    # # RUNNING LDA and LSI models - load dictionary and corpus
+    # #============================================================================
 
-    # LOAD DICTIONARY
-    dictionary = corpora.Dictionary.load('/Users/ppchow/data_science/CA-leg-predict/tmp/legtext.dict')
-    print dictionary
+    # # LOAD DICTIONARY
+    # dictionary = corpora.Dictionary.load('/Users/ppchow/data_science/CA-leg-predict/tmp/legtext.dict')
+    # print dictionary
 
-    #vectorize the features and add to a list of tuple (id, vector)
-    id_vector = []
-    [id_vector.append( (id_feature[i][0], dictionary.doc2bow(id_feature[i][1])) ) for i in range(len(id_feature))]
+    # #vectorize the features and add to a list of tuple (id, vector)
+    # id_vector = []
+    # [id_vector.append( (id_feature[i][0], dictionary.doc2bow(id_feature[i][1])) ) for i in range(len(id_feature))]
 
-    # output IDs associated with features and vectors for each document
-    with open('/tmp/id_feature_50.txt', 'wb') as ff:
-        pickle.dump(id_feature, ff)  
-    with open('/tmp/id_vector_50.txt', 'wb') as fv:
-        pickle.dump(id_vector, fv)
-    logging('output to files')  
+    # # output IDs associated with features and vectors for each document
+    # with open('/tmp/id_feature_50.txt', 'wb') as ff:
+    #     pickle.dump(id_feature, ff)  
+    # with open('/tmp/id_vector_50.txt', 'wb') as fv:
+    #     pickle.dump(id_vector, fv)
+    # logging('output to files')  
 
-    #vectorize: turn each document (list of works) into a vectorized bag of words
-    # corpus = [dictionary.doc2bow(feature) for feature in feature_list]
-    # corpora.MmCorpus.serialize('/Users/ppchow/data_science/CA-leg-predict/tmp/corpus.mm', corpus) 
-    # print 'saved corpus'
+    # #vectorize: turn each document (list of works) into a vectorized bag of words
+    # # corpus = [dictionary.doc2bow(feature) for feature in feature_list]
+    # # corpora.MmCorpus.serialize('/Users/ppchow/data_science/CA-leg-predict/tmp/corpus.mm', corpus) 
+    # # print 'saved corpus'
     
-    # LOAD corpus 
-    corpus_mm = corpora.MmCorpus('/Users/ppchow/data_science/CA-leg-predict/tmp/corpus.mm')
-    print corpus_mm
+    # # LOAD corpus 
+    # corpus_mm = corpora.MmCorpus('/Users/ppchow/data_science/CA-leg-predict/tmp/corpus.mm')
+    # print corpus_mm
 
-    # print 'step 1 - intializing model'
-    #step 1 -- initialize a model. This learns document frequencies.
-    tfidf = models.TfidfModel(corpus_mm) 
+    # # print 'step 1 - intializing model'
+    # #step 1 -- initialize a model. This learns document frequencies.
+    # tfidf = models.TfidfModel(corpus_mm) 
 
-    # print 'step 2 - use model to transform bunch of vectors'
-    # step 2 -- use the model to transform bunch of vectors.
-    corpus_tfidf = tfidf[corpus_mm]
+    # # print 'step 2 - use model to transform bunch of vectors'
+    # # step 2 -- use the model to transform bunch of vectors.
+    # corpus_tfidf = tfidf[corpus_mm]
 
-    # sunlight subject data about 45 categories
-    logging('running LSI model')
-    lsi = models.LsiModel(corpus_tfidf, id2word=dictionary, num_topics=50) # initialize an LSI transformation
-    lsi.save('/Users/ppchow/data_science/CA-leg-predict/tmp/lsi_model_50.pkl')
-    corpus_lsi = lsi[corpus_tfidf] # create a double wrapper over the original corpus: bow->tfidf->fold-in-lsi
-    corpus_lsi.save('/Users/ppchow/data_science/CA-leg-predict/tmp/corpus_lsi_model_50.pkl')
-    print 'lsi model completed'
+    # # sunlight subject data about 50 categories
+    # logging('running LSI model')
+    # lsi = models.LsiModel(corpus_tfidf, id2word=dictionary, num_topics=50) # initialize an LSI transformation
+    # lsi.save('/Users/ppchow/data_science/CA-leg-predict/tmp/lsi_model_50.pkl')
+    # corpus_lsi = lsi[corpus_tfidf] # create a double wrapper over the original corpus: bow->tfidf->fold-in-lsi
+    # corpus_lsi.save('/Users/ppchow/data_science/CA-leg-predict/tmp/corpus_lsi_model_50.pkl')
+    # print 'lsi model completed'
 
-    logging('running LDA models')
-    lda_tfidf = models.LdaModel(corpus_tfidf, id2word=dictionary, num_topics=50, update_every=1, chunksize=1000, passes=1, iterations=500) #model easier to interpert results
-    lda_tfidf.save('/Users/ppchow/data_science/CA-leg-predict/tmp/lsa_tfidf_model_50.pkl')
-    print 'lda model completed'
+    # logging('running LDA models')
+    # lda_tfidf = models.LdaModel(corpus_tfidf, id2word=dictionary, 
+    #               num_topics=50, update_every=1, chunksize=1000, passes=1, iterations=500) 
+    # lda_tfidf.save('./saved_models/lsa_tfidf_model_50.pkl')
+    # print 'lda model completed'
 
     #============================================================================
     # ANALYSIS - Load corpus, dictionary, models and python lists
     #============================================================================
 
-    # # LOAD DICTIONARY
-    # dictionary = corpora.Dictionary.load('/Users/ppchow/data_science/CA-leg-predict/tmp/legtext.dict')
+    # LOAD DICTIONARY
+    dictionary = corpora.Dictionary.load('./saved_models/legtext.dict')
     
-    # # LOAD CORPUS 
-    # corpus_mm = corpora.MmCorpus('/Users/ppchow/data_science/CA-leg-predict/tmp/corpus.mm')
+    # LOAD CORPUS 
+    corpus_mm = corpora.MmCorpus('./saved_models/corpus.mm')
  
-    # # LOAD MODELS
-    # lsi_model = models.LsiModel.load('/Users/ppchow/data_science/CA-leg-predict/tmp/lsi_model.pkl')
-    # # lda_corpus_model = models.LdaModel.load('/Users/ppchow/data_science/CA-leg-predict/tmp/lsa_model.pkl')
-    # lda_tfidf_model = models.LdaModel.load('/Users/ppchow/data_science/CA-leg-predict/tmp/lsa_tfidf_model.pkl')
+    # LOAD MODELS
+    lsi_model = models.LsiModel.load('./saved_models/lsi_model.pkl')
+    lda_corpus_model = models.LdaModel.load('./saved_models/lsa_model.pkl')
+    lda_tfidf_model = models.LdaModel.load('./saved_models/lsa_tfidf_model.pkl')
     
-    # # PRINT MODEL TOPICS
-    # print 'lsi model'
-    # print lsi_model.print_topics(25)
-    # print 'lda corpus model'
-    # print lda_corpus_model.print_topics(25)
+    # PRINT MODEL TOPICS
+    print 'lsi model', lsi_model
+    print lsi_model.print_topics(25)
+    print 'lda corpus model'
+    print lda_corpus_model.print_topics(25)
     # print 'lsi tfidf model'
     # print lda_tfidf_model.print_topics(25)
-
 
     logging.info('Finished')
   

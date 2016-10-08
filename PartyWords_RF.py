@@ -74,6 +74,14 @@ def main():
         bill_party.append(dict(zip(k,v)))
 
     logging.info('populated list of sponsor and party')    
+    #insert collection with all relevant information and push to Compose
+    #
+    #db2 = #cient connection with write persmissions
+    #client2 = MongoClient('mongodb://admin:_____@oceanic.mongohq.com:10036/openstates')
+    #db2 = client2.openstates
+    #db2.bill_party.insert(bill_party)
+
+
     # note to self/presentation: show number of bills sponsored by non-legislators
     # graph bills by party that passed .....     
 
@@ -93,11 +101,14 @@ def main():
         #oid = bill_party[i]['id']
         #print "Getting text for item", i, bill_party[i]['id']
         leg_text = list(db.legtext.find({'_id': bill_party[i]['id']}, {'text': 1}))[0]['text']
-        raw = nltk.clean_html(leg_text)
+        soup = BeautifulSoup(leg_text)
+        raw = soup.get_text()
         # bigram_vectorizer = CountVectorizer(ngram_range=(1, 2), token_pattern=r'\b\w+\b', min_df=1)
         bigram_features = analyze(raw)
         bill_party[i]['features'] = bigram_features
         bill_party[i]['raw'] = raw
+        bill_party[i]['id'] = id
+        
         # bill_party[i]['vec'] = bigram_vectorizer.fit_transform(bigram_features).toarray()
     
     party_options = {'democratic': 0, 'republican': 1}

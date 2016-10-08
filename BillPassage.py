@@ -8,6 +8,8 @@ import numpy as np
 import requests #used to import text from URL
 from patsy import dmatrices
 from sklearn.naive_bayes import BernoulliNB
+from sklearn.naive_bayes import GaussianNB
+
 import math
 
 import logging
@@ -70,7 +72,7 @@ def main():
     
     bills_details = list(db.bills_details.find({'state':'ca', 'type': 'bill'}, 
         {'_id': 1, 'session':1, 'chamber': 1, 'sponsors': 1, 'sponsors.leg_id':1, 'scraped_subjects': 1, 'subjects':1, 'type': 1,
-           'action_dates': 1, 'votes': 1, 'actions': 1}).limit(5000) )
+           'action_dates': 1, 'votes': 1, 'actions': 1}).limit(10000) )
 
     legis_details = list(db.legislators.find({'state': 'ca','level':'state'}, 
             {'_id': 1,'leg_id': 1,'party': 1,'district': 1,'active': 1 ,'chamber': 1}).limit(5000) )
@@ -84,7 +86,7 @@ def main():
 
     logger.info('Uploading median income by district data')
     fnames = np.array(['locations', 'district', 'chamber', 'med_ann_income'])
-    income_df = pd.read_csv('/Users/ppchow/data_science/CA-leg-predict/Med_Family_Income_20082012.csv', names=fnames)
+    income_df = pd.read_csv('./Med_Family_Income_20082012.csv', names=fnames)
     legis_income_df = pd.merge(income_df, df_legis, on=['chamber', 'district'], how='right')
     legis_income_df = legis_income_df.drop(['_id', 'district', 'chamber'], axis=1)
     logger.info('Combined legislation and income dataframes')
@@ -105,13 +107,15 @@ def main():
     #===============================================================================
     # APPLY NAIVE BAYES MODEL TO DATAFRAME
     #===============================================================================
-    df_bills_d_merged.describe()
-    df_bills_d_merged[df_bills_d_merged['bill_status'] == 1 ].describe()
+    #df_bills_d_merged.describe()
+    #df_bills_d_merged[df_bills_d_merged['bill_status'] == 1 ].describe()
     df_bills_d_merged.head()
-    y, X = dmatrices('bill_status ~ bill_duration + primary_sponsors + co_sponsors + locations + party - 1', data=df_bills_d_merged, return_type='dataframe')
+    y, X = dmatrices('bill_status ~ bill_duration + primary_sponsors + co_sponsors + locations + party - 1', 
+        data=df_bills_d_merged, return_type='dataframe')
     yy = y['bill_status[yes]']
 
     clf = BernoulliNB().fit(X, yy)
+    #clf = GaussianNB().fit(X,yy)
     print clf.intercept_
     print math.exp(clf.intercept_)
     print 'NB Score/R2', clf.score(X,yy)
