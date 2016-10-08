@@ -1,3 +1,6 @@
 #directories with large files
 saved_models/
 data/
+
+#files to ignore
+.DS_Store
