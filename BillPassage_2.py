@@ -114,7 +114,8 @@ def main():
     bills_details = list(db.bills_details.find({'state':'ca', 'type': 'bill'}, 
         {'_id': 1, 'session':1, 'chamber': 1, 'sponsors': 1, 'sponsors.leg_id':1, 
            'scraped_subjects': 1, 'subjects':1, 'type': 1,
-           'action_dates': 1, 'votes': 1, 'actions': 1, 'versions.url': 1}) )
+           'action_dates': 1, 'votes': 1, 'actions': 1, 
+           'versions.url': 1}).limit(5000) ) # Remove Limit
     #legtext = list(db.legtext.find())
     logging.info('Data succesfully obtained from MongoDB.\n')
 
