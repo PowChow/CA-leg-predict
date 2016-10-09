@@ -6,13 +6,13 @@ import pprint
 import pandas as pd
 import numpy as np
 import re
-
-import requests #used to import text from URL
-from patsy import dmatrices
-from sklearn.naive_bayes import BernoulliNB
-from sklearn.naive_bayes import GaussianNB
-
 import math
+import pickle
+
+from patsy import dmatrices
+from sklearn.cross_validation import cross_val_score
+from sklearn.preprocessing import StandardScaler
+from gensim import corpora, models, similarities
 
 import logging
 import sys
@@ -20,114 +20,14 @@ import getpass
 from time import time
 
 # Display progress logs
+logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+client = MongoClient('mongodb://galaHELP:pythonisfun!@oceanic.mongohq.com:10036/openstates')
+db = client.openstates
 
-logger = logging.getLogger('logger')
-hdlr = logging.FileHandler('/Users/'+ getpass.getuser() + '/Desktop/logger.log')
-formatter = logging.Formatter('%(asctime)s  %(levelname)s  %(message)s')
-hdlr.setFormatter(formatter)
-logger.addHandler(hdlr)
-logger.setLevel(logging.DEBUG)
+#============================================================================
+# FUNCTIONS
+#============================================================================
 
-#Username and password are read only. Let me know if you have to write anything!
-MONGOHQ_URL = 'mongodb://galaHELP:pythonisfun!@oceanic.mongohq.com:10036/openstates'
-
-'''
-@param param: None
-@note: connect to MongoDB database and return database object
-'''
-def EstablishConnection():
-    client  = MongoClient(MONGOHQ_URL)      #establish connection to database 
-    db = client.openstates                  #connect to 'openstates' database
-    logger.info('Yes, you have a connection to MongoDB')
-    return db      
-
-def main():
-    
-    logger.info('Started')
-    #============================================================================
-    #Establish connection and make database object
-    #============================================================================
-    db  = EstablishConnection()
-    
-    bill_table = db.ca_bills               #bill table
-    bill_d_table = db.bills_details        #bill details table
-    legislator_table = db.legislators      #legislator table
-    committee_table = db.committees        #committee table
-    
-    #==================================================================================================
-    #Query MongoDB to pull relevant data 
-    #==================================================================================================
-
-    # try:
-    #     bills_details = list(db.bills_details.find({'state':'ca', 'type': 'bill'}, 
-    #         {'_id': 1, 'session':1, 'chamber': 1, 'sponsors': 1, 'sponsors.leg_id':1, 'scraped_subjects': 1, 'subjects':1, 'type': 1,
-    #         'action_dates': 1, 'votes': 1, 'actions': 1}).limit(10000) )
-
-    #     legis_details = list(db.legislators.find({'state': 'ca','level':'state'}, 
-    #         {'_id': 1,'leg_id': 1,'party': 1,'district': 1,'active': 1 ,'chamber': 1}).limit(10000) )
-
-    #     logger.info('Data succesfully obtained from MongoDB.\n')
-    # except:
-    #     logger.info('Something went with wrong Querying MongoDB.\n')
-    #     pass
-    
-    bills_details = list(db.bills_details.find({'state':'ca', 'type': 'bill'}, 
-        {'_id': 1, 'session':1, 'chamber': 1, 'sponsors': 1, 'sponsors.leg_id':1, 
-           'scraped_subjects': 1, 'subjects':1, 'type': 1,
-           'action_dates': 1, 'votes': 1, 'actions': 1, 'versions.url': 1}).limit(5000) )
-    legtext = list(db.legtext.find().limit(5000))
-    logger.info('Data succesfully obtained from MongoDB.\n')
-
-    logger.info('Creating legis dataframe...........\n')
-    df_legis = pd.DataFrame(legis_details)
-    df_bills_d = pd.DataFrame(bills_details)
-    logger.info('Finished creating DataFrame........\n')
-
-    logger.info('Load model and get topics by URL...........\n')
-    lda_tfidf_model = models.LdaModel.load('./saved_models/lda_tfidf_model_100.pkl')
-    df_bill_topics = pd.DataFrame.from_dict( legtext_process(model=lda_tfidf_model) )
-    logger.info('Completed matching url and text...........\n')
-
-    logger.info('Apply transformation to bills_details......\n')
-    df_bills_d['bill_id'] = df_bills_d['versions'].map(lambda lst: re.findall(".*?bill_id=(.*)", str(lst[0]['url'])))
-    df_bills_d['bill_duration'] = df_bills_d['action_dates'].apply(lambda lst: billDuration(lst))
-    df_bills_d['bill_status'] = df_bills_d['actions'].map(lambda lst: billStatus(lst))
-    df_bills_d['primary_sponsors'] = df_bills_d['sponsors'].map(lambda lst: primarySponsors(lst))
-    df_bills_d['co_sponsors'] = df_bills_d['sponsors'].map(lambda lst: coSponsors(lst))
-    df_bills_d['leg_id'] = df_bills_d['sponsors'].map(lambda lst: lst[0]['leg_id'])
-    df_bills_d = df_bills_d.drop(['action_dates', 'actions', 'session', 'subjects', 'scraped_subjects', 'votes', 'type', 'sponsors'], axis = 1)
-    df_bills_d.fillna(0, inplace = True)   
-    df_bills_d_merged = pd.merge(df_bill_topics, df_bills_d, on='bill_id', how='inner')
-    df_bills_d_merged.to_csv('merged_df_bills_topics.csv')
-    print 'Prints Merged Bill Details', df_bills_d_merged.head(), len(df_bills_d_merged)
-    logger.info('Done applying transformation to DataFrame........\n')
-
-
-#     #===============================================================================
-#     # APPLY NAIVE BAYES MODEL TO DATAFRAME
-#     #===============================================================================
-#     #df_bills_d_merged.describe()
-#     #df_bills_d_merged[df_bills_d_merged['bill_status'] == 1 ].describe()
-#     df_bills_d_merged.head()
-#     y, X = dmatrices('bill_status ~ bill_duration + primary_sponsors + co_sponsors + locations + party - 1', 
-#         data=df_bills_d_merged, return_type='dataframe')
-#     yy = y['bill_status[yes]']
-
-#     clf = BernoulliNB().fit(X, yy)
-#     #clf = GaussianNB().fit(X,yy)
-#     print clf.intercept_
-#     print math.exp(clf.intercept_)
-#     print 'NB Score/R2', clf.score(X,yy)
-
-#     print "Coefs", clf.coef_[0]
-    
-#     top = np.argsort(clf.coef_[0])
-#     print top
-#     print clf.coef_[0][top]
-#     print 'X.columns top', X.columns[top]
-
-# #////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-# #////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 def legtext_process(lda_model):
     '''
     Function loads feature_list & lda_model
@@ -135,32 +35,36 @@ def legtext_process(lda_model):
     Return: bill_id with lda_topic & probabilites
     '''    
 
-    url_feature = pickle.load(open('./saved_models/url_feature_list_tuple.p', 'rb')
-    
-    #sample: uf = [{'url': 'https:1', 1: .034, 7: .34, 8: 0}]
-    uf_listdict = []
+    url_feature = pickle.load(open('./saved_models/url_feature_list_tuple.p', 'rb'))
+    leg_corpus = corpora.Dictionary.load('./saved_models/legtext.dict')
+
+    bill_topics_dict = []
 
     for i in xrange(len(url_feature)):
 
-        url, f = url_feature[i]['url'], url_feature[i]['text']
-        #url to bill_id
-        bill_id = re.findall(".*?bill_id=(.*)", s)
-        f_bow = dict_load.doc2bow(f)
-        t_dict = dict(lda_model(f_bow))
-        t_dict.update{'bill_id': bill_id}
+        url, f = url_feature[i][0], url_feature[i][1]
+        bill_id = re.findall(".*?bill_id=(.*)", url)[0]
+        f_bow = leg_corpus.doc2bow(f)
+        t_dict = dict(lda_model[f_bow])
+
+        t_dict.update({'bill_id': bill_id})
+        bill_topics_dict.append(t_dict)
+
+    logging.info('returning dict with bill_id and topics')
+    return bill_topics_dict
 
 def billDuration(lst):
-  start = lst.get('first')
-  end  = lst.get('last')
-  if start and end is not None:
-    _start = _datetime(start)
-    _end = _datetime(end)
-    delta = _end  - _start
-    val = (delta.total_seconds() *(1/3600.0)*(1/24.0))
+    start = lst.get('first')
+    end  = lst.get('last')
+    if start and end is not None:
+        _start = _datetime(start)
+        _end = _datetime(end)
+        delta = _end  - _start
+        val = (delta.total_seconds() *(1/3600.0)*(1/24.0))
     return val
 
 def _datetime(date_str):
-  return datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
+    return datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
 
 def isBill(lst):
     key = ['bill']
@@ -172,14 +76,14 @@ def isBill(lst):
 #0 == bill dies else 1 == bill passed
 # no == bill dies else no == bill passed
 def billStatus(lst):
-  str_lst = lst[-1]['action'].split()
-  key_die = ['died','Died','without','Without', 'vetoed','Vetoed', 'From', 'printer']
-  key_pass = ['chaptered', 'Chaptered']
+    str_lst = lst[-1]['action'].split()
+    key_die = ['died','Died','without','Without', 'vetoed','Vetoed', 'From', 'printer']
+    key_pass = ['chaptered', 'Chaptered']
 
-  if any(x in key_die for x in str_lst):
-    return 'no'
-  if any(x in key_pass for x in str_lst):
-    return 'yes'
+    if any(x in key_die for x in str_lst):
+        return 0
+    if any(x in key_pass for x in str_lst):
+        return 1
 
 def primarySponsors(lst):
     i = 0
@@ -195,8 +99,90 @@ def coSponsors(lst):
             i += 1
     return i
 
+#============================================================================
+# MAIN
+#============================================================================
+
+def main():
+    
+    logging.info('Started')
+    
+    #==================================================================================================
+    #Query MongoDB to pull relevant data 
+    #==================================================================================================
+    
+    # bills_details = list(db.bills_details.find({'state':'ca', 'type': 'bill'}, 
+    #     {'_id': 1, 'session':1, 'chamber': 1, 'sponsors': 1, 'sponsors.leg_id':1, 
+    #        'scraped_subjects': 1, 'subjects':1, 'type': 1,
+    #        'action_dates': 1, 'votes': 1, 'actions': 1, 'versions.url': 1}).limit(10) )
+    # legtext = list(db.legtext.find().limit(10))
+    # logging.info('Data succesfully obtained from MongoDB.\n')
+
+    # logging.info('Creating legis dataframe...........\n')
+    # df_bills_d = pd.DataFrame(bills_details)
+    # logging.info('Finished creating DataFrame........\n')
+
+    ## Only need to load this dataframe once
+    logging.info('Load model and get topics by URL...........\n')
+    lda_tfidf_model = models.LdaModel.load('./saved_models/lda_tfidf_model_100.pkl')
+    df_bill_topics = pd.DataFrame.from_dict( legtext_process(lda_tfidf_model) )
+    df_bill_topics.to_csv('./saved_models/df_bill_topics')
+    logging.info('Completed matching url and text...........\n')
+    print(df_bill_topics.head())
+
+    # logging.info('Apply transformation to bills_details......\n')
+    # df_bills_d['bill_id'] = df_bills_d['versions'].map(lambda lst: re.findall(".*?bill_id=(.*)", str(lst[0]['url']))[0])
+    # df_bills_d['bill_duration'] = df_bills_d['action_dates'].apply(lambda lst: billDuration(lst))
+    # df_bills_d['bill_status'] = df_bills_d['actions'].map(lambda lst: billStatus(lst))
+    # df_bills_d['primary_sponsors'] = df_bills_d['sponsors'].map(lambda lst: primarySponsors(lst))
+    # df_bills_d['co_sponsors'] = df_bills_d['sponsors'].map(lambda lst: coSponsors(lst))
+    # df_bills_d['leg_id'] = df_bills_d['sponsors'].map(lambda lst: lst[0]['leg_id'])
+    # df_bills_d = df_bills_d.drop(['action_dates', 'actions', 'session', 'subjects', 
+    #     'scraped_subjects', 'votes', 'type', 'sponsors'], axis = 1)
+    # df_bills_d.fillna(0, inplace = True)   
+    # df_bills_d_merged = pd.merge(df_bill_topics, df_bills_d, on='bill_id', how='inner')
+    # df_bills_d_merged.to_csv('merged_df_bills_topics.csv')
+    # print 'Prints Merged Bill Details', df_bills_d_merged.head(), len(df_bills_d_merged)
+    # logging.info('Done applying transformation to DataFrame........\n')
+
+    #===============================================================================
+    # APPLY LOGISTIC REGRESSION MODEL TO DATAFRAME
+    #===============================================================================
+
+    # x = df_bills_d_merged.drop(['bill_status']).fillna(0).values
+    # xScaled = preprocessing.StandardScaler().fit_transform(x)
+
+    # y = df_bills_d_merged['bill_status'].values
+
+    # X_train, X_test, y_train, y_test = train_test_split(xScaled, y, 
+    #     test_size=0.33, random_state=42)
+
+    # param_grid = [{'lr__C': [0.0001, 0.001, 0.01, 0.1, 1.0, 10.0, 100.0, 1000.0]}]
+
+    # pipe_lr = Pipeline(steps=[ ('lr', LogisticRegression(random_state=1)) ])
+
+    # #added statifiedKfolds for cv to decrease overfitting
+    # cvs = StratifiedKFold(y_train, n_folds = 5, shuffle=True)
+    
+    # gs = GridSearchCV(estimator=pipe_lr, param_grid=param_grid, 
+    #                   scoring='accuracy', 
+    #                   cv=cvs,n_jobs=-1)
+    # gs = gs.fit(X_train, y_train)
+    # print('Grid Search Best Score: %.4f' % gs.best_score_)
+    # print('Grid Search Best Parameter for C: ')
+    # print gs.best_params_
+    
+    # for params, mean_score, scores in gs.grid_scores_:
+    #     print("%0.3f (+/-%0.03f) for %r"
+    #           % (mean_score, scores.std() / 2, params))
+
+    # for metric in ['accuracy', 'precision', 'recall', 'roc_auc']:
+    # scores = cross_val_score(gs, X, y, cv=3, scoring=metric)
+    # print('cross_val_score', metric, scores.mean(), scores.std())
+
+
 # #////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 # #////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     
-# if __name__ == '__main__':
-#     main()
+if __name__ == '__main__':
+    main()
