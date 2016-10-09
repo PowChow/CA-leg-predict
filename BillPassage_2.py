@@ -130,7 +130,8 @@ def main():
     # df_bill_topics.to_csv('./saved_models/df_bill_topics.csv')
     df_bill_topics = pd.read_csv('./saved_models/df_bill_topics.csv')
     df_bill_topics.fillna(-0.0001)
-    logging.info('bill topics dataframe loaded....\n', df_bill_topics.head())
+    logging.info('bill topics dataframe loaded....\n')
+    print(df_bill_topics.head())
 
     # logging.info('Apply transformation to bills_details......\n')
     # df_bills_d['bill_id'] = df_bills_d['versions'].map(lambda lst: re.findall(".*?bill_id=(.*)", str(lst[0]['url']))[0])
