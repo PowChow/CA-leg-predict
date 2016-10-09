@@ -140,13 +140,13 @@ def main():
     df_bills_d['primary_sponsors'] = df_bills_d['sponsors'].map(lambda lst: primarySponsors(lst))
     df_bills_d['co_sponsors'] = df_bills_d['sponsors'].map(lambda lst: coSponsors(lst))
     df_bills_d['leg_id'] = df_bills_d['sponsors'].map(lambda lst: lst[0]['leg_id'])
-    df_bills_d = df_bills_d.drop(['action_dates','session', 'subjects', 
+    df_bills_d = df_bills_d.drop(['action_dates','session', 'subjects', 'actions'
         'scraped_subjects', 'votes', 'type', 'sponsors'], axis = 1)
     df_bills_d.fillna(0, inplace = True)   
     df_bills_d_merged = pd.merge(df_bill_topics, 
-                                df_bills_d[['bill_status', 'bill_id', 'actions']], 
+                                df_bills_d[['bill_status', 'bill_id']], 
                                 on='bill_id', how='inner')
-    df_bills_d_merged.to_csv('merged_df_bills_topics.csv')
+    df_bills_d_merged.to_csv('./saved_models/merged_df_bills_topics.csv')
     print 'Prints Merged Bill Details', df_bills_d_merged.head(), len(df_bills_d_merged)
     logging.info('Done applying transformation to DataFrame........\n')
 
@@ -154,7 +154,7 @@ def main():
     # APPLY LOGISTIC REGRESSION MODEL TO DATAFRAME
     #===============================================================================
 
-    # x = df_bills_d_merged.fillna(0).values
+    # x = df_bills_d_merged[[range(100)]].fillna(0).values
     # xScaled = preprocessing.StandardScaler().fit_transform(x)
 
     # y = df_bills_d_merged['bill_status'].values
