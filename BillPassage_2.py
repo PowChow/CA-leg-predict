@@ -124,11 +124,13 @@ def main():
 
     ## Only need to load this dataframe once
     logging.info('Load model and get topics by URL...........\n')
-    lda_tfidf_model = models.LdaModel.load('./saved_models/lda_tfidf_model_100.pkl')
-    df_bill_topics = pd.DataFrame.from_dict( legtext_process(lda_tfidf_model) )
-    df_bill_topics.to_csv('./saved_models/df_bill_topics')
-    logging.info('Completed matching url and text...........\n')
-    print(df_bill_topics.head())
+    # lda_tfidf_model = models.LdaModel.load('./saved_models/lda_tfidf_model_100.pkl')
+    # df_bill_topics = pd.DataFrame.from_dict( legtext_process(lda_tfidf_model) )
+    # df_bill_topics.fillna(-0.0001)
+    # df_bill_topics.to_csv('./saved_models/df_bill_topics.csv')
+    df_bill_topics = pd.read_csv('./saved_models/df_bill_topics.csv')
+    df_bill_topics.fillna(-0.0001)
+    logging.info('bill topics dataframe loaded....\n', df_bill_topics.head())
 
     # logging.info('Apply transformation to bills_details......\n')
     # df_bills_d['bill_id'] = df_bills_d['versions'].map(lambda lst: re.findall(".*?bill_id=(.*)", str(lst[0]['url']))[0])
