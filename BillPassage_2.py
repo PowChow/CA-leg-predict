@@ -140,7 +140,7 @@ def main():
     df_bills_d['primary_sponsors'] = df_bills_d['sponsors'].map(lambda lst: primarySponsors(lst))
     df_bills_d['co_sponsors'] = df_bills_d['sponsors'].map(lambda lst: coSponsors(lst))
     df_bills_d['leg_id'] = df_bills_d['sponsors'].map(lambda lst: lst[0]['leg_id'])
-    df_bills_d = df_bills_d.drop(['action_dates', 'actions', 'session', 'subjects', 
+    df_bills_d = df_bills_d.drop(['action_dates','session', 'subjects', 
         'scraped_subjects', 'votes', 'type', 'sponsors'], axis = 1)
     df_bills_d.fillna(0, inplace = True)   
     df_bills_d_merged = pd.merge(df_bill_topics, 
