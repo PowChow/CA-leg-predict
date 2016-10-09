@@ -144,7 +144,7 @@ def main():
         'scraped_subjects', 'votes', 'type', 'sponsors'], axis = 1)
     df_bills_d.fillna(0, inplace = True)   
     df_bills_d_merged = pd.merge(df_bill_topics, 
-                                df_bills_d[['bill_status', 'bill_id']], 
+                                df_bills_d[['bill_status', 'bill_id', 'actions']], 
                                 on='bill_id', how='inner')
     df_bills_d_merged.to_csv('merged_df_bills_topics.csv')
     print 'Prints Merged Bill Details', df_bills_d_merged.head(), len(df_bills_d_merged)
