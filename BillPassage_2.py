@@ -111,16 +111,16 @@ def main():
     #Query MongoDB to pull relevant data 
     #==================================================================================================
     
-    # bills_details = list(db.bills_details.find({'state':'ca', 'type': 'bill'}, 
-    #     {'_id': 1, 'session':1, 'chamber': 1, 'sponsors': 1, 'sponsors.leg_id':1, 
-    #        'scraped_subjects': 1, 'subjects':1, 'type': 1,
-    #        'action_dates': 1, 'votes': 1, 'actions': 1, 'versions.url': 1}).limit(10) )
-    # legtext = list(db.legtext.find().limit(10))
-    # logging.info('Data succesfully obtained from MongoDB.\n')
+    bills_details = list(db.bills_details.find({'state':'ca', 'type': 'bill'}, 
+        {'_id': 1, 'session':1, 'chamber': 1, 'sponsors': 1, 'sponsors.leg_id':1, 
+           'scraped_subjects': 1, 'subjects':1, 'type': 1,
+           'action_dates': 1, 'votes': 1, 'actions': 1, 'versions.url': 1}).limit(10) )
+    legtext = list(db.legtext.find().limit(10))
+    logging.info('Data succesfully obtained from MongoDB.\n')
 
-    # logging.info('Creating legis dataframe...........\n')
-    # df_bills_d = pd.DataFrame(bills_details)
-    # logging.info('Finished creating DataFrame........\n')
+    logging.info('Creating legis dataframe...........\n')
+    df_bills_d = pd.DataFrame(bills_details)
+    logging.info('Finished creating DataFrame........\n')
 
     ## Only need to load this dataframe once
     logging.info('Load model and get topics by URL...........\n')
@@ -130,31 +130,31 @@ def main():
     # df_bill_topics.to_csv('./saved_models/df_bill_topics.csv')
     df_bill_topics = pd.read_csv('./saved_models/df_bill_topics.csv')
     df_bill_topics.fillna(-0.0001, inplace=True)
-    df_bill_topics.drop('Unnamed: 0', inplace=True)
     logging.info('bill topics dataframe loaded....\n')
     print(df_bill_topics.head())
-    print(df_bill_topics.columns)
 
-    # logging.info('Apply transformation to bills_details......\n')
-    # df_bills_d['bill_id'] = df_bills_d['versions'].map(lambda lst: re.findall(".*?bill_id=(.*)", str(lst[0]['url']))[0])
-    # df_bills_d['bill_duration'] = df_bills_d['action_dates'].apply(lambda lst: billDuration(lst))
-    # df_bills_d['bill_status'] = df_bills_d['actions'].map(lambda lst: billStatus(lst))
-    # df_bills_d['primary_sponsors'] = df_bills_d['sponsors'].map(lambda lst: primarySponsors(lst))
-    # df_bills_d['co_sponsors'] = df_bills_d['sponsors'].map(lambda lst: coSponsors(lst))
-    # df_bills_d['leg_id'] = df_bills_d['sponsors'].map(lambda lst: lst[0]['leg_id'])
-    # df_bills_d = df_bills_d.drop(['action_dates', 'actions', 'session', 'subjects', 
-    #     'scraped_subjects', 'votes', 'type', 'sponsors'], axis = 1)
-    # df_bills_d.fillna(0, inplace = True)   
-    # df_bills_d_merged = pd.merge(df_bill_topics, df_bills_d, on='bill_id', how='inner')
-    # df_bills_d_merged.to_csv('merged_df_bills_topics.csv')
-    # print 'Prints Merged Bill Details', df_bills_d_merged.head(), len(df_bills_d_merged)
-    # logging.info('Done applying transformation to DataFrame........\n')
+    logging.info('Apply transformation to bills_details......\n')
+    df_bills_d['bill_id'] = df_bills_d['versions'].map(lambda lst: re.findall(".*?bill_id=(.*)", str(lst[0]['url']))[0])
+    df_bills_d['bill_duration'] = df_bills_d['action_dates'].apply(lambda lst: billDuration(lst))
+    df_bills_d['bill_status'] = df_bills_d['actions'].map(lambda lst: billStatus(lst))
+    df_bills_d['primary_sponsors'] = df_bills_d['sponsors'].map(lambda lst: primarySponsors(lst))
+    df_bills_d['co_sponsors'] = df_bills_d['sponsors'].map(lambda lst: coSponsors(lst))
+    df_bills_d['leg_id'] = df_bills_d['sponsors'].map(lambda lst: lst[0]['leg_id'])
+    df_bills_d = df_bills_d.drop(['action_dates', 'actions', 'session', 'subjects', 
+        'scraped_subjects', 'votes', 'type', 'sponsors'], axis = 1)
+    df_bills_d.fillna(0, inplace = True)   
+    df_bills_d_merged = pd.merge(df_bill_topics, 
+                                df_bills_d[['bill_status', 'bill_id']], 
+                                on='bill_id', how='inner')
+    df_bills_d_merged.to_csv('merged_df_bills_topics.csv')
+    print 'Prints Merged Bill Details', df_bills_d_merged.head(), len(df_bills_d_merged)
+    logging.info('Done applying transformation to DataFrame........\n')
 
     #===============================================================================
     # APPLY LOGISTIC REGRESSION MODEL TO DATAFRAME
     #===============================================================================
 
-    # x = df_bills_d_merged.drop(['bill_status']).fillna(0).values
+    # x = df_bills_d_merged.fillna(0).values
     # xScaled = preprocessing.StandardScaler().fit_transform(x)
 
     # y = df_bills_d_merged['bill_status'].values
