@@ -16,6 +16,7 @@ from gensim import corpora, models, similarities
 def main():
     df = pd.read_csv('./saved_models/merged_df_bills_topic.csv')
     df2 = df.iloc[:, 2:-2] 
+    print df2.head()
     x = df2.values
     xScaled = StandardScaler().fit_transform(x)
 
