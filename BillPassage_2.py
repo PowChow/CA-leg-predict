@@ -129,7 +129,7 @@ def main():
     # df_bill_topics.fillna(-0.0001)
     # df_bill_topics.to_csv('./saved_models/df_bill_topics.csv')
     df_bill_topics = pd.read_csv('./saved_models/df_bill_topics.csv')
-    df_bill_topics.fillna(-0.0001)
+    df_bill_topics.fillna(-0.0001, inplace=True)
     logging.info('bill topics dataframe loaded....\n')
     print(df_bill_topics.head())
 
