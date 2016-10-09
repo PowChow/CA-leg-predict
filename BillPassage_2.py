@@ -133,6 +133,7 @@ def main():
     df_bill_topics.drop('Unnamed: 0', inplace=True)
     logging.info('bill topics dataframe loaded....\n')
     print(df_bill_topics.head())
+    print(df_bill_topics.columns)
 
     # logging.info('Apply transformation to bills_details......\n')
     # df_bills_d['bill_id'] = df_bills_d['versions'].map(lambda lst: re.findall(".*?bill_id=(.*)", str(lst[0]['url']))[0])
