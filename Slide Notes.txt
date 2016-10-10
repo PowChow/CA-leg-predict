@@ -1,0 +1,33 @@
+Slide: 
+- The legislation process are the gateways to important decision-making but mostly shrouded in mystery and lacking transparency. 
+- The public and advocates with limited resources are unable to effectively engage in important decision making processes.
+- Provide certainty to the legislative process, which can save time and resources for interested parties to monitor important issues and lower the barrier to entry for participation and impact
+
+
+Slide: 
+Social Listening Context 
+Bag of Words / Word Counting
+
+Data Transformation with Matrix of documents
+NLP Techniques: Segmentation, Normalization, Lemmatization, Stemming, Stop words, parts of speech
+Term Frequency - Inverse document frequency
+
+Slide: 
+How does the human brain recognize friend or foe? We  use relationship of features
+Choose methods that provides rational way to handle many descriptive and dependent variables 
+Data sets are a way to describe a problem and potential solutions
+Combine data exploration with hypothesis testing and generation
+
+Slides Appendix:
+Handle many variables in a rational way — overview, diagnose, monitor, predict, classify even in complex situations. do not need to know things beforehand. Maybe start exploration without a hypothesis 
+How does your brain process a face? Brain does not look individual features, i.e. nose, mouth, eyes, to recognize your friend or foe we look at the overall pattern of faces, eigenfaces
+Find a way to look at pattern of features — covariance, relationship of variables (i.e. for two variables easy) applied to process monitoring and medical diagnostics. Now consider this principle applied to many more variables
+All points represented in x-dimensions. represent data by one plane - least square sense - project into plane. plane will span main variation (biplot, explanation of variance and samples. two points close to each other == samples are similar in relationship to the plane; opposite == dissimilar)
+ As few principle components as possible, enough to describe 80% of the data
+score plot. Outlier detection. Process working well or out of control. (potentially remove outliers). at 0,0 means variable is not important. Attach manual labels to axis (- x-axis, + x-axis, - y-axis). amount of artificial latent value. 
+residuals 
+In addition to hypothesis testing, use data set we believe that describes a problem. Learn something new from the data. Observer empirically in the data; actually occurred. help formula questions and testing scenarios. 
+Exchange sample names for colors — i.e. airport states, size of airports, econ status of country,  
+Loadings will tell us why the samples are placed where they are. information about the variables. Define the plane and new coordinate system. Each is a direction in space with numbers associated (magnitude and direction) Loadings = Eigenvectors * sqrt(eigenvalues) 
+PCA assume that samples are similar in nature, come from the same distribution
+Calculate eigenvalues of the covariance matrix

@@ -115,7 +115,7 @@ def main():
         {'_id': 1, 'session':1, 'chamber': 1, 'sponsors': 1, 'sponsors.leg_id':1, 
            'scraped_subjects': 1, 'subjects':1, 'type': 1,
            'action_dates': 1, 'votes': 1, 'actions': 1, 
-           'versions.url': 1}).limit(5000) ) # Remove Limit
+           'versions.url': 1}) ) # .limit(5000) Remove Limit
     #legtext = list(db.legtext.find())
     logging.info('Data succesfully obtained from MongoDB.\n')
 
@@ -125,11 +125,11 @@ def main():
 
     ## Only need to load this dataframe once
     logging.info('Load model and get topics by URL...........\n')
-    # lda_tfidf_model = models.LdaModel.load('./saved_models/lda_tfidf_model_100.pkl')
-    # df_bill_topics = pd.DataFrame.from_dict( legtext_process(lda_tfidf_model) )
-    # df_bill_topics.fillna(-0.0001)
-    # df_bill_topics.to_csv('./saved_models/df_bill_topics.csv')
-    df_bill_topics = pd.read_csv('./saved_models/df_bill_topics.csv')
+    lda_tfidf_model = models.LdaModel.load('./saved_models/lda_tfidf_model_50.pkl')
+    df_bill_topics = pd.DataFrame.from_dict( legtext_process(lda_tfidf_model) )
+    df_bill_topics.fillna(-0.0001)
+    df_bill_topics.to_csv('./saved_models/df_bill_topics_50.csv')
+    #df_bill_topics = pd.read_csv('./saved_models/df_bill_topics.csv')
     df_bill_topics.fillna(-0.0001, inplace=True)
     logging.info('bill topics dataframe loaded....\n')
     print(df_bill_topics.head())
@@ -147,7 +147,7 @@ def main():
     df_bills_d_merged = pd.merge(df_bill_topics, 
                                 df_bills_d[['bill_status', 'bill_id']], 
                                 on='bill_id', how='inner')
-    df_bills_d_merged.to_csv('./saved_models/merged_df_bills_topics.csv')
+    df_bills_d_merged.to_csv('./saved_models/merged_df_bills_topics_50.csv')
     print 'Prints Merged Bill Details', df_bills_d_merged.head(), len(df_bills_d_merged)
     logging.info('Done applying transformation to DataFrame........\n')
 

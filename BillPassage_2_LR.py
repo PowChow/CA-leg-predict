@@ -3,20 +3,23 @@ import numpy as np
 import re
 import math
 import pickle
+from patsy import dmatrices
+import statsmodels.api as sm
 
 from patsy import dmatrices
-from sklearn.cross_validation import cross_val_score, train_test_split
+from sklearn.cross_validation import cross_val_score, train_test_split, StratifiedKFold
+from sklearn.metrics import classification_report, log_loss
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LogisticRegression
-from sklearn.cross_validation import StratifiedKFold
 from sklearn.grid_search import GridSearchCV
 from gensim import corpora, models, similarities
 
 def main():
-    df = pd.read_csv('./saved_models/merged_df_not_used.csv')
-    df2 = df.iloc[:, 2:-3] 
+    df = pd.read_csv('./saved_models/merged_df.csv')
+    df2 = df.iloc[:, 2:-2] 
     print df2.head()
+    print 'len', len(df2)
     x = df2.values
     xScaled = StandardScaler().fit_transform(x)
 
@@ -45,19 +48,30 @@ def main():
         print("%0.3f (+/-%0.03f) for %r"
               % (mean_score, scores.std() / 2, params))
 
-    lr = LogisticRegression(C=0.1, random_state=1036, n_jobs=-1)
+    lr = LogisticRegression(C=0.001, random_state=1036, n_jobs=-1)
 
     for metric in ['accuracy', 'precision', 'recall', 'roc_auc']:
          scores = cross_val_score(lr, x, y, cv=5, scoring=metric)
          print('cross_val_score', metric, scores.mean(), scores.std())
 
     # Print out coefficients
-    lr.fit(x, y)
+    lr.fit(X_train, y_train)
 
     df_coefs = pd.DataFrame({'features' : df2.columns, 
         'coef': lr.coef_[0,:]})
     df_coefs.sort('coef', ascending=False, inplace=True)
-    df_coefs.to_csv('./saved_models/df_lr_coefs_finals.csv')
+    df_coefs.to_csv('./saved_models/df_lr_coefs_finals_100.csv')
     print df_coefs
+
+    #prediction and classification report
+    y_preds = lr.predict(X_test)
+    print classification_report(y_test, y_preds)
+
+    print 'logit statsmodel'
+    model = sm.Logit(x,y)
+    model.fit()
+    print model.summary()
+    print np.exp(model.params)
+
 if __name__ == '__main__':
     main()
